@@ -14,11 +14,18 @@ def submit_transaction(x, pot, user):
     transaction_id = x + 1
 
     # Collect date data and create date object
+    today = datetime.datetime.today()
+
     print_slow("Excellent. Now we'll define when the transaction took place. Please note, all date input values must be in the format DD/MM/YY")
     print()
     print()
 
-    date = collect_date("Date of transction: ")
+    while True:
+        date = collect_date("Date of transction: ")
+        if date <= today:
+            break
+        else:
+            print("Transactions cannot be submitted for the future. Please try again")
 
     # Collect transaction type
     print()
@@ -26,8 +33,8 @@ def submit_transaction(x, pot, user):
     while True:
         types = ["in", "out"]
         print_slow('Please define the type of transaction. "in" or "out": ')
-        type = input()
-        if type not in types:
+        transaction_type = input()
+        if transaction_type not in types:
             print("incorrect transaction reference")
         else:
             break
@@ -42,18 +49,28 @@ def submit_transaction(x, pot, user):
         else:
             print("amount must be greater than 0")
         
-    if type == "out":
+    if transaction_type == "out":
         amount = amount * -1
     else:
         pass
 
     #Input all information into the Class
     
-    transaction = Transaction(transaction_id=transaction_id, transaction_name=transaction_name, date=date, pot=pot, type=type, amount=amount, user=user)
+    transaction = Transaction(transaction_id=transaction_id, transaction_name=transaction_name, date=date, pot=pot, type=transaction_type, amount=amount, user=user)
+    transaction_data = [(transaction_id, transaction_name, date, pot.pot_id, transaction_type, amount, user.username)]
     
     if transaction:
         print_slow("Thanks, your transaction has been created succesfully")
+
+        # Establish a connection to the Database
+        db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+        con = sqlite3.connect(db_path)
+        cur = con.cursor()
+
         # save transaction to database
+        cur.executemany("INSERT INTO transactions VALUES(?, ?, ?, ?, ?, ?, ?)", transaction_data)
+        con.commit()
+
         print()
     else:
         print_slow("ERROR: transaction not created succesfully")
@@ -115,6 +132,17 @@ def summary(vaults, pots):
                 else:
                     continue
 
+def transaction_summary(transactions): # Need SQL Table Print Function Here?
+    print()
+    print_slow(f"\033[31mTransactions\033[0m") 
+    print()
+    print()
+    print_slow(f"transaction_id | transaction_name |   date  |   amount   |")
+    for i in transactions:
+        print()
+        print_slow(f"       {transactions[i].transaction_id}       |        {transactions[i].transaction_name}        | {transactions[i].date} |  {transactions[i].amount}  ")
+        print()
+
 def create_user(*args):
     if args:
         username = args[0]
@@ -123,7 +151,6 @@ def create_user(*args):
         print_slow("Now firstly, what is your name?: ")
         username = input()
         user = User(username)
-        # save user to database
         print("")
     return user
 
@@ -165,7 +192,6 @@ def create_pot(x, vault, user):
     
     if pot:
         print_slow("Thanks, your pot has been created succesfully")
-        # save pot to database
         print()
         print()
     else:
@@ -206,7 +232,6 @@ def create_vault(x, user):
     if vault:
         print()
         print_slow("Thanks, your vault has been created succesfully")
-        # save vault to database
         print()
         print()
     else:
@@ -216,7 +241,7 @@ def create_vault(x, user):
 
 def create_profile():
     # Establish a connection to the Database
-    db_path = "/Users/michaelfortune/Developer/projects/money/money_sql/money.db" 
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
     
@@ -357,7 +382,7 @@ We hope you enjoy using Money Pots!
 def re_vaults(name, user):
 
     # Establish Database Connection
-    db_path = "/Users/michaelfortune/Developer/projects/money/money_sql/money.db" 
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
 
@@ -390,7 +415,7 @@ def re_vaults(name, user):
 def re_pots(vaults, vault_ids, user):
 
     # Establish Database Connection
-    db_path = "/Users/michaelfortune/Developer/projects/money/money_sql/money.db" 
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
 
@@ -427,7 +452,7 @@ def re_pots(vaults, vault_ids, user):
 def re_transactions(pots, pot_ids, user):
 
     # Establish Database Connection
-    db_path = "/Users/michaelfortune/Developer/projects/money/money_sql/money.db" 
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
 
@@ -463,7 +488,7 @@ def re_transactions(pots, pot_ids, user):
 
 def count_pots():
     # Establish Database Connection
-    db_path = "/Users/michaelfortune/Developer/projects/money/money_sql/money.db" 
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
 
@@ -478,7 +503,7 @@ def count_pots():
         
 def count_vaults():
     # Establish Database Connection
-    db_path = "/Users/michaelfortune/Developer/projects/money/money_sql/money.db" 
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
 
@@ -493,7 +518,7 @@ def count_vaults():
         
 def count_transactions():
     # Establish Database Connection
-    db_path = "/Users/michaelfortune/Developer/projects/money/money_sql/money.db" 
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
 

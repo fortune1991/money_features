@@ -135,11 +135,13 @@ class Pot:
         :return: The sum of the amounts of all pots.
         """
         sum = 0
+        today = datetime.datetime.today()
         if len(self.transactions) > 0:
             for transaction in self.transactions:
-                sum += transaction.amount
-                self.amount += sum
-                self.transactions = []
+                if transaction.date <= today:
+                    sum += transaction.amount
+                    self.amount += sum
+                    self.transactions = []
         return 
             
 class Transaction:

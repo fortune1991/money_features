@@ -3,7 +3,7 @@ import sqlite3
 def create_database():
     
     # Establish a connection to the database or create it if it doesn't exist
-    db_path = "/Users/michaelfortune/Developer/projects/money/money_sql/money.db" 
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
 
@@ -46,6 +46,21 @@ def create_database():
         CREATE TABLE transactions (
             transaction_id INTEGER PRIMARY KEY,
             transaction_name TEXT NOT NULL,
+            date DATE NOT NULL,
+            pot_id INTEGER,
+            type TEXT NOT NULL,
+            amount REAL NOT NULL,
+            username TEXT NOT NULL,
+            FOREIGN KEY (pot_id) REFERENCES pots(pot_id),
+            FOREIGN KEY (username) REFERENCES users(username)
+        )
+    """)
+
+    # Create forecasts table
+    cur.execute("""
+        CREATE TABLE forecasts (
+            forcast_id INTEGER PRIMARY KEY,
+            forecast_name TEXT NOT NULL,
             date DATE NOT NULL,
             pot_id INTEGER,
             type TEXT NOT NULL,
