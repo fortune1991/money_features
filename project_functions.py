@@ -2,6 +2,10 @@ import datetime, os, sqlite3
 from project_classes import User, Vault, Pot, Transaction
 from time import sleep
 
+import warnings
+warnings.filterwarnings("ignore", message="The default datetime adapter is deprecated", category=DeprecationWarning)
+
+
 def submit_transaction(x, pot, user):
     
     # Collect transaction name
@@ -193,7 +197,6 @@ def create_pot(x, vault, user):
     if pot:
         print_slow("Thanks, your pot has been created succesfully")
         print()
-        print()
     else:
         print_slow("ERROR: pot not created succesfully")
     
@@ -232,8 +235,6 @@ def create_vault(x, user):
     if vault:
         print()
         print_slow("Thanks, your vault has been created succesfully")
-        print()
-        print()
     else:
         print_slow("ERROR: vault not created succesfully")
     
@@ -351,32 +352,33 @@ def create_profile():
 
 def instructions():
     return """
-In this program, your savings are organized into two categories: Vaults and Pots.
+In this program, your savings are organized into two categories: vaults and pots.
 
-- A Vault is a collection of Pots, each assigned a specific time frame.
-- A Pot represents an individual budget within a Vault.
+- A vault is a collection of Pots
+- A pot represents an individual budget within a Vault
 
-For example, between 17/03/25 and 17/01/26, you might create a 'Travelling' Vault
-to manage your holiday expenses. This Vault could contain multiple Pots, each
-representing a budget for a different destination.
+For example, between 17/03/25 and 17/01/26, you might create a 'Travelling' vault
+to manage your holiday expenses. This vault could contain multiple pots, each
+representing a budget for a different destination. Attached to the pots can be either 
+"transactions" or "forecasts" to represent actual or predicted expenditure, this creating 
+a financal management model. 
 
-Once you've set up your Vaults and Pots, the program will enter an infinite loop
-where you can choose from three options:
+Once you've set up your vaults and pots, the program will enter an infinite loop
+where you can choose from the following options:
 
-1. Submit a transaction – Transactions are linked to a specific Pot and either 
-increase or decrease its balance, depending on the selected type.
-2. View a summary – This provides an updated overview of your Vaults and Pots, 
-reflecting any transactions you've made.
-3. Exit the program – A final summary of your balances will be displayed before 
-the program closes.
-4. Create a new vault - will be associated with the user currently logged in
-5. Create a new pot - will be associated with the user currently logged in
+1. "New" to submit a new item (profile, vaults, pots, transactions, forecasts),
+2. "Summary" to get either a balance report, forecast report or transactions summary,
+3. "Delete" to remove an item,
+4. "Instructions" to get further information on how to use Money Pots,
+5. "Exit" to terminate the programme
 
-Please note: This program does not store data permanently. Once you exit, all 
-Vault and Pot data will be lost.
+The data collected is stored in an SQL database. The user can log back in when the programme
+is re-executed to start where they left off. 
+
+Please note, the date boundries entered for the vaults, pots and transactions are all bound together.
+So you can't associate a pot for use in the year 2026, if it's associated vault ends in 2025.
 
 We hope you enjoy using Money Pots!
-
 """
 
 def re_vaults(name, user):

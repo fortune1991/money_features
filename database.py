@@ -1,5 +1,9 @@
 import sqlite3
 
+import warnings
+warnings.filterwarnings("ignore", message="The default datetime adapter is deprecated", category=DeprecationWarning)
+
+
 def create_database():
     
     # Establish a connection to the database or create it if it doesn't exist
