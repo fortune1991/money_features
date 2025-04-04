@@ -44,6 +44,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
     """)
             print()
             login = input().strip() # Remove trailing white space
+            print()
             user_exists = False
 
             # SQL QUERY TO DETERMINE IF USER EXISTS
@@ -57,6 +58,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
            # REINSTANTIATE OBJECTS FROM DATABASE
                         
             if user_exists == True:
+                print("Welcome back to Money Pots")
                 #reinstantiate user
                 user = create_user(login)
 
@@ -78,7 +80,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     pass
 
                 else:
-                    transactions, transaction_ids = re_transactions(pots, pot_ids, user)
+                    transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
 
                 # Update Pots and Vaults values - UPDATE THIS LOGIC, SO IT ONLY UPDATES VALUES BASED ON TODAYS DATE (NOT FUTURE ONES)
 
@@ -161,12 +163,36 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     cur.executemany("INSERT INTO vaults VALUES(?, ?, ?, ?, ?)", vault_data)
                     con.commit()
 
+                    print("Vault created succesfully")
+                    print()
+
+                    # Create associated pots
+                    print("Now, let's create at least one pot to associate with this vault")
+                    pot_count = count_pots()
+                    selected_vault = vaults.get(f"vault_{(vault_count + 1)}")
+                    
+
+                    pots[f"pot_{(pot_count + 1)}"] = create_pot(pot_count, selected_vault, user)
+
+                    pot_data = [(pots[f"pot_{(pot_count + 1)}"].pot_id, 
+                    pots[f"pot_{(pot_count + 1)}"].pot_name, 
+                    pots[f"pot_{(pot_count + 1)}"].start, 
+                    pots[f"pot_{(pot_count + 1)}"].end, 
+                    pots[f"pot_{(pot_count + 1)}"].vault_id, 
+                    pots[f"pot_{(pot_count + 1)}"].amount, 
+                    pots[f"pot_{(pot_count + 1)}"].username)]
+
+                    # Insert pots data into the database
+                    cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?, ?, ?)", pot_data)
+                    con.commit()
+
                     break
 
                 elif new_action == "Pot":
 
                     while True:
                         try:
+                            print()
                             print_slow("What vault will this pot be assigned to? ")
                             pot_vault = input()
                             pot_count = count_pots()
@@ -209,10 +235,12 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             print()
 
                         break
+                    break
 
                 elif new_action == "Transaction":
 
                     print_slow("Excellent. Now, let me help you create a new transaction.")
+                    print()
                     print()
                     no_transactions = 1
                     
@@ -233,13 +261,15 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
                                     # Find the pot using a simple loop
                                     selected_pot = None
+                                    selected_vault = None
                                     for pot in pots.values():
                                         if pot.pot_name == pot_input and pot.username == user.username: 
                                             selected_pot = pot
+                                            selected_vault = vaults.get(f"vault_{pot.vault_id}")
                                             break
 
                                     if selected_pot:
-                                        transactions[f"transaction_{x+1}"] = submit_transaction(start_transaction, selected_pot, user)
+                                        transactions[f"transaction_{x+1}"] = submit_transaction(start_transaction, selected_pot, selected_vault, user)
                                         selected_pot.pot_value()
                                         break
                                     else:
@@ -339,13 +369,77 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
                 if summary_action == "Profile":
                     print()
-                    print("Delete Profile")
-                    break
+                    try:
+                        # Get the username before deleting
+                        username = user.username
+
+                        # Delete all related data first
+                        cur.execute("DELETE FROM transactions WHERE username = ?", (username,))
+                        cur.execute("DELETE FROM pots WHERE username = ?", (username,))
+                        cur.execute("DELETE FROM vaults WHERE username = ?", (username,))
+
+                        # Finally, delete the user
+                        cur.execute("DELETE FROM users WHERE username = ?", (username,))
+                        
+                        con.commit()
+                        print("Profile deleted successfully.")
+
+                    except sqlite3.Error as e:
+                        print(f"Error deleting profile: {e}")
+
+                    exit()
 
                 elif summary_action == "Vault":
                     print()
-                    print("Delete Vault")
-                    break
+                    vault_name = input("Enter the name of the Vault you want to delete: ").strip()
+                    username = user.username  # Get the current user's username
+
+                    # Search for the vault that matches both the name and the username
+                    selected_vault = None
+                    for vault in vaults.values():
+                        if vault.vault_name == vault_name and vault.username == username:
+                            selected_vault = vault
+                            break
+
+                    if selected_vault:
+                        vault_id = selected_vault.vault_id
+                        # Proceed with deletion of related data first
+                        cur.execute("DELETE FROM transactions WHERE vault_id = ?", (vault_id,))
+                        cur.execute("DELETE FROM pots WHERE vault_id = ?", (vault_id,))
+
+                        # Finally delete the vault
+                        cur.execute("DELETE FROM vaults WHERE vault_id = ?", (vault_id,))
+                        con.commit()
+
+                        #reinstantiate vaults 
+                        vaults, vault_ids = re_vaults(username, user)
+                        
+                        #reinstantiate pots
+                        pots, pot_ids = re_pots(vaults, vault_ids, user)
+
+                        #reinstantiate transactions 
+
+                        transaction_exists = False
+                        res = cur.execute("SELECT * FROM transactions")
+                        returned_transactions = res.fetchall()
+                        if len(returned_transactions) > 0:
+                            transaction_exists = True
+
+                        if transaction_exists == False:
+                            pass
+
+                        else:
+                            transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
+
+                        print()
+                        print("Vault deleted succesfully")
+
+                        break
+
+                    else:
+                        print(f"Vault '{vault_name}' not found for user '{username}'.")
+                        print(f"Available vaults for {username}: {[v.vault_name for v in vaults.values() if v.username == username]}")
+
 
                 elif summary_action == "Pot":
                     print()
@@ -395,8 +489,8 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 # are now present (or past), then the programme should ask the user to update and then approve the forecasts. These will be updated
 # in the SQL database as transactions.
 
+# Continue to Write Delete Function. Start from "Pots"
 # Update messages
-# Write Delete Function
 # Write Forecasting Function
 # Create/Improve print and reporting functions. NEED SQL Table Function?
 # Make sure pot dates sit within the boundaries of the vault date

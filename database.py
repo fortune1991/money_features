@@ -52,10 +52,12 @@ def create_database():
             transaction_name TEXT NOT NULL,
             date DATE NOT NULL,
             pot_id INTEGER,
+            vault_id INTEGER,
             type TEXT NOT NULL,
             amount REAL NOT NULL,
             username TEXT NOT NULL,
             FOREIGN KEY (pot_id) REFERENCES pots(pot_id),
+            FOREIGN KEY (vault_id) REFERENCES vaults(vault_id),
             FOREIGN KEY (username) REFERENCES users(username)
         )
     """)

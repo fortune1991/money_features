@@ -6,7 +6,7 @@ import warnings
 warnings.filterwarnings("ignore", message="The default datetime adapter is deprecated", category=DeprecationWarning)
 
 
-def submit_transaction(x, pot, user):
+def submit_transaction(x, pot, vault, user):
     
     # Collect transaction name
     print()
@@ -60,8 +60,8 @@ def submit_transaction(x, pot, user):
 
     #Input all information into the Class
     
-    transaction = Transaction(transaction_id=transaction_id, transaction_name=transaction_name, date=date, pot=pot, type=transaction_type, amount=amount, user=user)
-    transaction_data = [(transaction_id, transaction_name, date, pot.pot_id, transaction_type, amount, user.username)]
+    transaction = Transaction(transaction_id=transaction_id, transaction_name=transaction_name, date=date, pot=pot, vault=vault, type=transaction_type, amount=amount, user=user)
+    transaction_data = [(transaction_id, transaction_name, date, pot.pot_id, vault.vault_id, transaction_type, amount, user.username)]
     
     if transaction:
         print_slow("Thanks, your transaction has been created succesfully")
@@ -72,7 +72,7 @@ def submit_transaction(x, pot, user):
         cur = con.cursor()
 
         # save transaction to database
-        cur.executemany("INSERT INTO transactions VALUES(?, ?, ?, ?, ?, ?, ?)", transaction_data)
+        cur.executemany("INSERT INTO transactions VALUES(?, ?, ?, ?, ?, ?, ?, ?)", transaction_data)
         con.commit()
 
         print()
@@ -235,6 +235,8 @@ def create_vault(x, user):
     if vault:
         print()
         print_slow("Thanks, your vault has been created succesfully")
+        print()
+        print()
     else:
         print_slow("ERROR: vault not created succesfully")
     
@@ -360,7 +362,7 @@ In this program, your savings are organized into two categories: vaults and pots
 For example, between 17/03/25 and 17/01/26, you might create a 'Travelling' vault
 to manage your holiday expenses. This vault could contain multiple pots, each
 representing a budget for a different destination. Attached to the pots can be either 
-"transactions" or "forecasts" to represent actual or predicted expenditure, this creating 
+"transactions" or "forecasts" to represent actual or predicted expenditure, thus creating 
 a financal management model. 
 
 Once you've set up your vaults and pots, the program will enter an infinite loop
@@ -451,7 +453,7 @@ def re_pots(vaults, vault_ids, user):
 
     return pots, pot_ids
 
-def re_transactions(pots, pot_ids, user):
+def re_transactions(pots, vaults, pot_ids, user):
 
     # Establish Database Connection
     db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
@@ -474,11 +476,12 @@ def re_transactions(pots, pot_ids, user):
                 transaction_id = int(transaction[0])
                 transaction_name = transaction[1]
                 date = convert_date(transaction[2])
-                type = (transaction[4])
-                amount = int(transaction[5])
+                type = (transaction[5])
+                amount = int(transaction[6])
                 pot = pots[f"pot_{transaction[3]}"] # Dictionary key format is "Pot_1: Object"
+                vault = vaults[f"vault_{transaction[4]}"] # Dictionary key format is "Vault_1: Object"
                 # Create pot instance
-                transaction = Transaction(transaction_id=transaction_id, transaction_name=transaction_name, date=date, pot=pot, type=type, amount=amount, user=user)
+                transaction = Transaction(transaction_id=transaction_id, transaction_name=transaction_name, date=date, pot=pot, vault=vault, type=type, amount=amount, user=user)
                 # Add instance to transactions object dictionary
                 transactions[f"transaction_{transaction.transaction_id}"] = transaction
                 # Append transaction_id to list

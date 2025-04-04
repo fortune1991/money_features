@@ -145,7 +145,7 @@ class Pot:
         return 
             
 class Transaction:
-    def __init__(self, transaction_id, transaction_name, date, pot, user, type="out", amount=0.00):
+    def __init__(self, transaction_id, transaction_name, date, pot, vault, user, type="out", amount=0.00):
         """
         Initialize a Transaction object.
 
@@ -174,6 +174,8 @@ class Transaction:
         self.date = date
         self.pot = pot  # Composition used instead of inheritence: Transaction has a Pot object instance
         self.pot_id = pot.pot_id # String of pot_id
+        self.vault = vault  # Composition used instead of inheritence: Transaction has a Pot object instance
+        self.vault_id = vault.vault_id # String of pot_id
         self.type = type
         self.amount = amount
         self.user = user # Composition used instead of inheritence: Vault has a User object instance
