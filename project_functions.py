@@ -1,5 +1,6 @@
 import datetime, os, sqlite3
 from project_classes import User, Vault, Pot, Transaction
+from tabulate import tabulate
 from time import sleep
 
 import warnings
@@ -109,21 +110,39 @@ def convert_date(string):
     return date
 
 def summary(vaults, pots):
+    print()
     for i in vaults:
-        vault_value = vaults[i].vault_value()
-        pot_lines = []
-        for j in pots:
-            if pots[j].vault == vaults[i]:
-                pot_lines.append(f"{pots[j].pot_name} = ${pots[j].amount}")
-        
-        pot_section = "\n".join(pot_lines) if pot_lines else ""
-        print_slow(f"\n\033[31mVault\033[0m\n{vaults[i].vault_name} = ${vault_value}\n\033[31mPots\033[0m\n{pot_section}")
+        vault = vaults[i]
+        vault_value = vault.vault_value()
 
-def transaction_summary(transactions): # Need SQL Table Print Function Here?
-    
-    print_slow(f"\033[31mTransactions\033[0m \n transaction_id | transaction_name |   date  |   amount   |") 
+        # First row: Vault info, second column left blank
+        title_row = [f"Vault Name: {vault.vault_name}", f"Vault Value: ${vault_value}"]
+
+        # Column headers
+        header_row = ["Pot Names", "Pot Values"]
+
+        # Pot data
+        pot_rows = []
+        for j in pots:
+            if pots[j].vault == vault:
+                pot_rows.append([pots[j].pot_name, f"${pots[j].amount}"])
+
+        # Combine into one table
+        full_table = [title_row, header_row] + pot_rows
+
+        # Print the whole thing as one table
+        print(tabulate(full_table, tablefmt="simple_grid"),end="\n\n")
+
+
+def transaction_summary(transactions): 
+
+    table = []
     for i in transactions:
-        print_slow(f"       {transactions[i].transaction_id}       |        {transactions[i].transaction_name}        | {transactions[i].date} |  {transactions[i].amount}  ")
+        row = [transactions[i].transaction_id, transactions[i].transaction_name,transactions[i].date,transactions[i].amount]
+        table.append(row)
+
+    print(f"\n{tabulate(table, headers=["transaction_id","transaction_name", "date", "amount"], tablefmt="heavy_grid")}\n")
+    
 
 def create_user(*args):
     if args:

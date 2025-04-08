@@ -1,6 +1,7 @@
 import datetime, os, sqlite3
 from project_classes import User, Vault, Pot, Transaction
 from project_functions import submit_transaction, print_slow, print_slow_nospace, int_validator, collect_date, convert_date, summary, create_pot, create_user, create_vault, create_profile, instructions, re_vaults, re_pots, re_transactions, count_pots, count_transactions, count_vaults, transaction_summary
+from tabulate import tabulate
 from time import sleep
 from database import create_database
 
@@ -418,8 +419,8 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 # are now present (or past), then the programme should ask the user to update and then approve the forecasts. These will be updated
 # in the SQL database as transactions.
 
-# Why doesn't Transaction summary show all transactions? Transactions have the same name in my example
 # Create/Improve print and reporting functions using Tabulate
+# Add Exit function to "New" and "Delete"
 # Continue to Write Delete Function. Start from "Pots"
 # Write Forecasting Function
 # Make sure pot dates sit within the boundaries of the vault date
