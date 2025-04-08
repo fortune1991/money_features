@@ -1,6 +1,6 @@
 import datetime, os, sqlite3
 from project_classes import User, Vault, Pot, Transaction
-from project_functions import submit_transaction, print_slow, int_validator, collect_date, convert_date, summary, create_pot, create_user, create_vault, create_profile, instructions, re_vaults, re_pots, re_transactions, count_pots, count_transactions, count_vaults, transaction_summary
+from project_functions import submit_transaction, print_slow, print_slow_nospace, int_validator, collect_date, convert_date, summary, create_pot, create_user, create_vault, create_profile, instructions, re_vaults, re_pots, re_transactions, count_pots, count_transactions, count_vaults, transaction_summary
 from time import sleep
 from database import create_database
 
@@ -21,10 +21,8 @@ def main():
     if not database_exists:
 
         create_database()
-        
         print_slow("""
-Welcome to Money Pots, your savings and budgeting calculator.
-        """)
+Welcome to Money Pots, your savings and budgeting calculator.""")
         print_slow(instructions())
         
         user, vaults, pots = create_profile()
@@ -38,13 +36,9 @@ Welcome to Money Pots, your savings and budgeting calculator.
             db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
             con = sqlite3.connect(db_path)
             cur = con.cursor()
-
             print_slow("""
-Welcome to Money Pots, your savings and budgeting calculator. Let me help you to login and view your profile. What's your username?
-    """)
-            print()
+Welcome to Money Pots, your savings and budgeting calculator. Let me help you to login and view your profile. What's your username?""")
             login = input().strip() # Remove trailing white space
-            print()
             user_exists = False
 
             # SQL QUERY TO DETERMINE IF USER EXISTS
@@ -58,27 +52,22 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
            # REINSTANTIATE OBJECTS FROM DATABASE
                         
             if user_exists == True:
-                print("Welcome back to Money Pots")
+                print()
+                print_slow("Welcome back to Money Pots")
                 #reinstantiate user
                 user = create_user(login)
-
                 #reinstantiate vaults 
                 vaults, vault_ids = re_vaults(login, user)
-                
                 #reinstantiate pots
                 pots, pot_ids = re_pots(vaults, vault_ids, user)
-
                 #reinstantiate transactions 
-
                 transaction_exists = False
                 res = cur.execute("SELECT * FROM transactions")
                 returned_transactions = res.fetchall()
                 if len(returned_transactions) > 0:
                     transaction_exists = True
-
                 if transaction_exists == False:
                     pass
-
                 else:
                     transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
 
@@ -95,15 +84,11 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
             else:
                 con.close()
-                print()
-                print("User doesn't exist. Respond 'Try again' 'New user' or 'Exit'")    
-                print()
-
+                print_slow("\nUser doesn't exist. Respond 'Try again' 'New user' or 'Exit'")    
                 response = input()
 
                 if response == "New user":
-                    print()
-                    print("Excellent. Please answer the following questions to create a new user profile")
+                    print_slow("\nExcellent. Please answer the following questions to create a new user profile")
                     user, vaults, pots = create_profile()
                     break
                 elif response == "Try again":
@@ -111,7 +96,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 elif response == "Exit":
                     exit()
                 else:
-                    print("Unknown Command. Please try to login again")                
+                    print_slow("\nUnknown Command. Please try to login again")                
      
 # Loop on Command line until exit
 
@@ -122,55 +107,36 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
     cur = con.cursor()
 
     while True:
-        print()
         print_slow('Now, I await your commands to proceed. Please type: \n\n"New" to submit a new item (profile, vaults, pots, transactions, forecasts), \n"Summary" to get either a balance report, forecast report or transactions summary, \n"Delete" to remove an item, \n"Instructions" to get further information on how to use Money Pots, \n"Exit" to terminate the programme')
-        print()
-        print()
         action = input()
-
         if action == "New":
             while True:
-
-                print()
-                print_slow('What type of new item would you like to create? \n\n"Profile" to create a new user profile, \n"Vault" to create a new vault, \n"Pot" to create a new pot, \n"Transaction" to submit a new transaction, \n"Forecast" to submit an estimate for predicted spending')
-                print()
-                print()
+                print_slow('\nWhat type of new item would you like to create? \n\n"Profile" to create a new user profile, \n"Vault" to create a new vault, \n"Pot" to create a new pot, \n"Transaction" to submit a new transaction, \n"Forecast" to submit an estimate for predicted spending')
                 new_action = input()
-
                 if new_action == "Profile":
-
-                    print()
-                    print("Excellent. Please answer the following questions to create a new user profile")
+                    print_slow("\nExcellent. Please answer the following questions to create a new user profile")
                     transactions= {}
                     forecasts = {}
                     user, vaults, pots = create_profile()
                     break
 
                 elif new_action == "Vault":
-
                     vault_count = count_vaults()
                     vaults[f"vault_{(vault_count + 1)}"] = create_vault(vault_count, user)
-
                     vault_data = [(vaults[f"vault_{(vault_count + 1)}"].vault_id,
                     vaults[f"vault_{(vault_count + 1)}"].vault_name,
                     vaults[f"vault_{(vault_count + 1)}"].start,
                     vaults[f"vault_{(vault_count + 1)}"].end,
                     vaults[f"vault_{(vault_count + 1)}"].username)]
 
-                    print()
-
                     # Insert vaults data into the database
                     cur.executemany("INSERT INTO vaults VALUES(?, ?, ?, ?, ?)", vault_data)
                     con.commit()
-
-                    print("Vault created succesfully")
-                    print()
-
+                    
                     # Create associated pots
-                    print("Now, let's create at least one pot to associate with this vault")
+                    print_slow_nospace("Now, let's create at least one pot to associate with this vault")
                     pot_count = count_pots()
                     selected_vault = vaults.get(f"vault_{(vault_count + 1)}")
-                    
 
                     pots[f"pot_{(pot_count + 1)}"] = create_pot(pot_count, selected_vault, user)
 
@@ -186,14 +152,13 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?, ?, ?)", pot_data)
                     con.commit()
 
+                    action = ""
                     break
 
                 elif new_action == "Pot":
-
                     while True:
                         try:
-                            print()
-                            print_slow("What vault will this pot be assigned to? ")
+                            print_slow("\nWhat vault will this pot be assigned to? ")
                             pot_vault = input()
                             pot_count = count_pots()
                             selected_vault = None
@@ -216,44 +181,30 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                                 # Insert pots data into the database
                                 cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?, ?, ?)", pot_data)
                                 con.commit()
-
                                 break
 
                             else:
-                                print(f"Vault '{vault_input}' not found. Please enter a valid vault name.")
-                                print()
-
-            
+                                print_slow(f"Vault '{vault_input}' not found. Please enter a valid vault name.")
+                                
                         except ValueError as e:  
-                            print(f"Error: {e}")
-                            print("Please try again")
-                            print()
-
+                            print_slow(f"Error: {e}")
+                            print_slow("Please try again")
+                            
                         except Exception as e:  
-                            print(f"An unexpected error occurred: {e}")
-                            print("Please try again")
-                            print()
-
+                            print_slow(f"An unexpected error occurred: {e}")
+                            print_slow("Please try again")
                         break
+                    action = ""
                     break
 
                 elif new_action == "Transaction":
-
-                    print_slow("Excellent. Now, let me help you create a new transaction.")
-                    print()
-                    print()
+                    print_slow("\nExcellent. Now, let me help you create a new transaction.")
                     no_transactions = 1
-                    
                     while True:
                         try:
                             for x in range(no_transactions):
-                                print(f"Transaction {x+1}")
-                                print()
-                                
                                 while True: 
-                                    
                                     # Count existing transactions
-                                    
                                     start_transaction = count_transactions()
                                     
                                     print_slow("What pot should this pot be assigned to?: ")
@@ -273,102 +224,93 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                                         selected_pot.pot_value()
                                         break
                                     else:
-                                        print(f"pot '{pot_input}' not found. Please enter a valid pot name.")
-                                        print()
+                                        print_slow(f"pot '{pot_input}' not found. Please enter a valid pot name.")
+                                        
+                            action = ""
                             break
                         
                         except ValueError as e:  
-                            print(f"Error: {e}")
-                            print()
-
+                            print_slow(f"Error: {e}")
+                            
                         except Exception as e:  
-                            print(f"An unexpected error occurred: {e}")
-                            print()
-
+                            print_slow(f"An unexpected error occurred: {e}")
+                            
                     break
                     
-                    print()
-
-                elif new_action == "Forecast": # COMPLETE THIS FUNCTION!
+                elif new_action == "Forecast":
                     while True:
-                        print_slow('OK, would you like to submit a "single expense" or a "weekly expense"? \n\n')
+                        print_slow('\nOK, would you like to submit a "Single expense" or a "Weekly expense"? or "Exit" to return')
                         expense = input()
 
-                        if expense == "single expense":
-                            single = int(input("What's the amount of your predicted expenditure? "))
-                            print_slow("Excellent. Now we'll define when the transaction took place. Please note, all date input values must be in the format DD/MM/YY")
-                            print()
-                            print()
+                        if expense == "Single expense":
+                            single = int(input("\nWhat's the amount of your predicted expenditure? \n\n"))
+                            print_slow("\nExcellent. Now we'll define when the transaction took place. Please note, all date input values must be in the format DD/MM/YY")
+                            
                             while True:
-                                expense_date = collect_date("Date of transction: ")
+                                expense_date = collect_date("Date of transaction: ")
                                 today = datetime.datetime.today()
                                 if expense_date < today:
-                                    print_slow("Invalid Date\n")
+                                    print_slow("\nInvalid Date")
                                 else:
-                                    print(today)
+                                    print_slow(f"\n{str(today)}")
+                                    print_slow("Single expense recorded")
                                     break
+                            
+                        elif expense == "Weekly expense":    
+                            weekly = int(input("\nWhat's your predicted weekly expenditure? "))
+                            no_weeks = int(input("\nHow many weeks is this for? "))
+                            print_slow("\nExcellent. Now we'll define when the transaction took place. Please note, all date input values must be in the format DD/MM/YY")
+                            
+                            while True:
+                                expense_start_date = collect_date("Date of transaction: ")
+                                today = datetime.datetime.today()
+                                if expense_start_date < today:
+                                    print_slow("\nInvalid Date")
+                                else:
+                                    print_slow(f"\n{str(today)}")
+                                    print_slow("Weekly expense recorded")
+                                    break
+                            
+                        elif expense == "Exit":
+                            print()
                             break
-                
-                        elif expense == "weekly expense":
-                            weekly = int(input("What's your predicted weekly expenditure? "))
-                            expense_start_date = collect_date("Date of transction: ")
-                            today = date.today()
-                            print(today)
-                            break
+                            
                         else:
-                            print_slow("Please enter a valid expense type")
-                            break
+                            print_slow("\nPlease enter a valid expense type ('Single expense', 'Weekly expense', or 'Exit' to return")
+                        
+                        break
 
-                else:
-                    print("Sorry, I don't recognize that instruction. Please try again.")
-
-            continue
-
+                action = ""
+                break
 
         if action == "Summary":
             while True:
-
-                print()
-                print_slow('What type of summary would you like to create? \n\n"Balance Summary" to show your vaults and pots balances, \n"Forecast Summary" to show your predicted future balances based on your forecast expenditure, \n"Transaction Summary" to show a list of all your recorded transactions')
-                print()
-                print()
+                print_slow('\nWhat type of summary would you like to create? \n\n"Balance Summary" to show your vaults and pots balances, \n"Forecast Summary" to show your predicted future balances based on your forecast expenditure, \n"Transaction Summary" to show a list of all your recorded transactions')
                 summary_action = input()
 
                 if summary_action == "Balance Summary":
-                    print()
                     summary(vaults, pots)
-                    print()
                     break
 
                 elif summary_action == "Forecast Summary":
-                    print()
-                    print("Forecast Summary")
+                    print_slow("\nForecast Summary")
                     break
 
                 elif summary_action == "Transaction Summary":
-                    print()
                     transaction_summary(transactions)
-                    print()
                     break
 
                 else:
-                    print()
-                    print("Sorry, I don't recognize that instruction. Please try again.")
+                    print_slow("Sorry, I don't recognize that instruction. Please try again.")
 
             continue
 
-        
         elif action == "Delete":
             while True:
-
-                print()
-                print_slow('What would you like to delete? \n\n"Profile" to delete a user profile and all associated data, \n"Vault" to delete a specific vault, \n"Pot" to delete a specific pot, \n"Transaction" to delete a specific transaction, \n"Forecast" to delete a specific Forecast')
-                print()
-                print()
+                print_slow('\nWhat would you like to delete? \n\n"Profile" to delete a user profile and all associated data, \n"Vault" to delete a specific vault, \n"Pot" to delete a specific pot, \n"Transaction" to delete a specific transaction, \n"Forecast" to delete a specific Forecast')
                 summary_action = input()
 
                 if summary_action == "Profile":
-                    print()
                     try:
                         # Get the username before deleting
                         username = user.username
@@ -382,16 +324,16 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                         cur.execute("DELETE FROM users WHERE username = ?", (username,))
                         
                         con.commit()
-                        print("Profile deleted successfully.")
+                        print_slow("\nProfile deleted successfully.")
 
                     except sqlite3.Error as e:
-                        print(f"Error deleting profile: {e}")
+                        print_slow(f"\nError deleting profile: {e}")
 
                     exit()
 
                 elif summary_action == "Vault":
-                    print()
-                    vault_name = input("Enter the name of the Vault you want to delete: ").strip()
+                    
+                    vault_name = input("\nEnter the name of the Vault you want to delete: \n\n").strip()
                     username = user.username  # Get the current user's username
 
                     # Search for the vault that matches both the name and the username
@@ -431,57 +373,44 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                         else:
                             transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
 
-                        print()
-                        print("Vault deleted succesfully")
-
+                        print_slow("\nVault deleted succesfully")
                         break
 
                     else:
-                        print(f"Vault '{vault_name}' not found for user '{username}'.")
-                        print(f"Available vaults for {username}: {[v.vault_name for v in vaults.values() if v.username == username]}")
-
+                        print_slow(f"Vault '{vault_name}' not found for user '{username}'.")
+                        print_slow(f"Available vaults for {username}: {[v.vault_name for v in vaults.values() if v.username == username]}")
 
                 elif summary_action == "Pot":
-                    print()
-                    print("Delete Pot")
+                    print_slow("Delete Pot")
                     break
 
                 elif summary_action == "Transaction":
-                    print()
-                    print("Delete Transaction")
+                    print_slow("Delete Transaction")
                     break
 
                 elif summary_action == "Forecast":
-                    print()
-                    print("Delete Forecast")
+                    print_slow("Delete Forecast")
                     break
 
                 else:
-                    print()
-                    print("Input not recognized")
+                    print_slow("Input not recognized")
 
             continue
-
 
         elif action == "Instructions":
             print_slow(instructions())
 
-
         elif action == "Exit":
             con.close()
-            print()
-            print_slow("OK, the program will now terminate. See final values of the vaults and pots below. Thanks for using Money Pots!")
-            print()
+            print_slow("\nOK, the program will now terminate. See final values of the vaults and pots below. Thanks for using Money Pots!")
             summary(vaults, pots)
-            print()
             exit()
 
-        else:
-            print()
-            print_slow("Invalid command. Please try again")
-            print()
+        elif action == "":
+            continue
 
-        
+        else:
+            print_slow("\nInvalid command. Please try again")
 
 # Add feature within infinite loop for "Forecasting". This should allow users to submit prospective transactions 
 # in two different formats. "single expense" and "weekly expense". After each expense is submitted, the programme
@@ -489,18 +418,16 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 # are now present (or past), then the programme should ask the user to update and then approve the forecasts. These will be updated
 # in the SQL database as transactions.
 
+# Why doesn't Transaction summary show all transactions? Transactions have the same name in my example
+# Create/Improve print and reporting functions using Tabulate
 # Continue to Write Delete Function. Start from "Pots"
-# Update messages
 # Write Forecasting Function
-# Create/Improve print and reporting functions. NEED SQL Table Function?
 # Make sure pot dates sit within the boundaries of the vault date
 # Make sure transaction and forecast dates sit within the boundaries of the pot date
 # Tidy up comments to make code more readable
 # Write code tests
 # Use programme for a while
 # Type up blog posts
-
-
 
 if __name__ == "__main__":
     main()
