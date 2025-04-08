@@ -390,16 +390,99 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                         break
 
                     else:
-                        print_slow(f"Vault '{vault_name}' not found for user '{username}'.")
-                        print_slow(f"Available vaults for {username}: {[v.vault_name for v in vaults.values() if v.username == username]}")
+                        print_slow(f"\nVault '{vault_name}' not found for user '{username}'.")
+                        print_slow_nospace(f"Available vaults for {username}: {[v.vault_name for v in vaults.values() if v.username == username]}")
 
                 elif delete_action == "Pot":
-                    print_slow("Delete Pot")
-                    break
+                    pot_name = input("\nEnter the name of the Pot you want to delete: \n\n").strip()
+                    username = user.username  # Get the current user's username
+
+                    # Search for the pot that matches both the name and the username
+                    selected_pot = None
+                    for pot in pots.values():
+                        if pot.pot_name == pot_name and pot.username == username:
+                            selected_pot = pot
+                            break
+
+                    if selected_pot:
+                        pot_id = selected_pot.pot_id
+                        # Proceed with deletion of related data first
+                        cur.execute("DELETE FROM transactions WHERE pot_id = ?", (pot_id,))
+
+                        # Finally delete the pot
+                        cur.execute("DELETE FROM pots WHERE pot_id = ?", (pot_id,))
+                        con.commit()
+
+                        #reinstantiate vaults 
+                        vaults, vault_ids = re_vaults(username, user)
+                        
+                        #reinstantiate pots
+                        pots, pot_ids = re_pots(vaults, vault_ids, user)
+
+                        #reinstantiate transactions 
+
+                        transaction_exists = False
+                        res = cur.execute("SELECT * FROM transactions")
+                        returned_transactions = res.fetchall()
+                        if len(returned_transactions) > 0:
+                            transaction_exists = True
+
+                        if transaction_exists == False:
+                            pass
+
+                        else:
+                            transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
+
+                        print_slow("\nPot deleted succesfully")
+                        break
+
+                    else:
+                        print_slow(f"\nPot '{pot_name}' not found for user '{username}'.")
+                        print_slow_nospace(f"Available pots for {username}: {[p.pot_name for p in pots.values() if p.username == username]}")
 
                 elif delete_action == "Transaction":
-                    print_slow("Delete Transaction")
-                    break
+                    transaction_id = int(input("\nEnter the transaction_id that you want to delete: \n\n").strip())
+                    username = user.username  # Get the current user's username
+
+                    # Search for the transaction that matches both the id and the username
+                    selected_transaction = None
+                    for transaction in transactions.values():
+                        if transaction.transaction_id == transaction_id and pot.username == username:
+                            selected_transaction = transaction
+                            break
+
+                    if selected_transaction:
+                        
+                        # Delete the transaction
+                        cur.execute("DELETE FROM transactions WHERE transaction_id = ?", (transaction_id,))
+                        con.commit()
+
+                        #reinstantiate vaults 
+                        vaults, vault_ids = re_vaults(username, user)
+                        
+                        #reinstantiate pots
+                        pots, pot_ids = re_pots(vaults, vault_ids, user)
+
+                        #reinstantiate transactions 
+
+                        transaction_exists = False
+                        res = cur.execute("SELECT * FROM transactions")
+                        returned_transactions = res.fetchall()
+                        if len(returned_transactions) > 0:
+                            transaction_exists = True
+
+                        if transaction_exists == False:
+                            pass
+
+                        else:
+                            transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
+
+                        print_slow("\nTransaction deleted succesfully")
+                        break
+
+                    else:
+                        print_slow(f"\nTransaction '{transaction_id}' not found for user '{username}'.")
+                        print_slow_nospace(f"Available transactions for {username}: {[t.transaction_id for t in transactions.values() if t.username == username]}")
 
                 elif delete_action == "Forecast":
                     print_slow("Delete Forecast")
@@ -436,9 +519,8 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 # are now present (or past), then the programme should ask the user to update and then approve the forecasts. These will be updated
 # in the SQL database as transactions.
 
-# Add Exit function to "New" and "Delete"
-# Continue to Write Delete Function. Start from "Pots"
-# Write Forecasting Function
+
+# Write Forecasting Function. Add functions for delete, new, summary etc. 
 # Make sure pot dates sit within the boundaries of the vault date
 # Make sure transaction and forecast dates sit within the boundaries of the pot date
 # Tidy up comments to make code more readable
