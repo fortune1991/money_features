@@ -97,7 +97,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 elif response == "Exit":
                     exit()
                 else:
-                    print_slow("\nUnknown Command. Please try to login again")                
+                    print_slow_nospace("\nUnknown Command. Please try to login again")                
      
 # Loop on Command line until exit
 
@@ -108,11 +108,11 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
     cur = con.cursor()
 
     while True:
-        print_slow('Now, I await your commands to proceed. Please type: \n\n"New" to submit a new item (profile, vaults, pots, transactions, forecasts), \n"Summary" to get either a balance report, forecast report or transactions summary, \n"Delete" to remove an item, \n"Instructions" to get further information on how to use Money Pots, \n"Exit" to terminate the programme')
+        print_slow('\033[1;31mMain Menu\033[0m\n\nNow, I await your commands to proceed. Please type: \n\n"New" to submit a new item (profile, vaults, pots, transactions, forecasts), \n"Summary" to get either a balance report, forecast report or transactions summary, \n"Delete" to remove an item, \n"Instructions" to get further information on how to use Money Pots, \n"Exit" to terminate the programme')
         action = input()
         if action == "New":
             while True:
-                print_slow('\nWhat type of new item would you like to create? \n\n"Profile" to create a new user profile, \n"Vault" to create a new vault, \n"Pot" to create a new pot, \n"Transaction" to submit a new transaction, \n"Forecast" to submit an estimate for predicted spending')
+                print_slow('\nWhat type of new item would you like to create? \n\n\033[1;31mNew Items Menu\033[0m \n\n"Profile" to create a new user profile, \n"Vault" to create a new vault, \n"Pot" to create a new pot, \n"Transaction" to submit a new transaction, \n"Forecast" to submit an estimate for predicted spending, \n"Exit" to return back to main menu')
                 new_action = input()
                 if new_action == "Profile":
                     print_slow("\nExcellent. Please answer the following questions to create a new user profile")
@@ -240,7 +240,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     
                 elif new_action == "Forecast":
                     while True:
-                        print_slow('\nOK, would you like to submit a "Single expense" or a "Weekly expense"? or "Exit" to return')
+                        print_slow('\nOK, would you like to submit a "Single expense" or a "Weekly expense"? or "Exit" to return back to the main menu')
                         expense = input()
 
                         if expense == "Single expense":
@@ -281,12 +281,20 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                         
                         break
 
+                elif new_action == "Exit":
+                    action = ""
+                    print()
+                    break
+
+                else:
+                    print_slow("\nSorry, I don't recognize that instruction. Please try again.")
+
                 action = ""
                 break
 
         if action == "Summary":
             while True:
-                print_slow('\nWhat type of summary would you like to create? \n\n"Balance Summary" to show your vaults and pots balances, \n"Forecast Summary" to show your predicted future balances based on your forecast expenditure, \n"Transaction Summary" to show a list of all your recorded transactions')
+                print_slow('\n\033[1;31mSummary Menu\033[0m\n\nWhat type of summary would you like to create? \n\n"Balance Summary" to show your vaults and pots balances, \n"Forecast Summary" to show your predicted future balances based on your forecast expenditure, \n"Transaction Summary" to show a list of all your recorded transactions, \n"Exit" to return back to the main menu')
                 summary_action = input()
 
                 if summary_action == "Balance Summary":
@@ -301,6 +309,10 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     transaction_summary(transactions)
                     break
 
+                elif summary_action == "Exit":
+                    print()
+                    break
+
                 else:
                     print_slow("Sorry, I don't recognize that instruction. Please try again.")
 
@@ -308,10 +320,10 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
         elif action == "Delete":
             while True:
-                print_slow('\nWhat would you like to delete? \n\n"Profile" to delete a user profile and all associated data, \n"Vault" to delete a specific vault, \n"Pot" to delete a specific pot, \n"Transaction" to delete a specific transaction, \n"Forecast" to delete a specific Forecast')
-                summary_action = input()
+                print_slow('\n\033[1;31mDelete Menu\033[0m\n\nWhat would you like to delete? \n\n"Profile" to delete a user profile and all associated data, \n"Vault" to delete a specific vault, \n"Pot" to delete a specific pot, \n"Transaction" to delete a specific transaction, \n"Forecast" to delete a specific Forecast, \n"Exit" to return to main menu')
+                delete_action = input()
 
-                if summary_action == "Profile":
+                if delete_action == "Profile":
                     try:
                         # Get the username before deleting
                         username = user.username
@@ -332,7 +344,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
                     exit()
 
-                elif summary_action == "Vault":
+                elif delete_action == "Vault":
                     
                     vault_name = input("\nEnter the name of the Vault you want to delete: \n\n").strip()
                     username = user.username  # Get the current user's username
@@ -381,24 +393,29 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                         print_slow(f"Vault '{vault_name}' not found for user '{username}'.")
                         print_slow(f"Available vaults for {username}: {[v.vault_name for v in vaults.values() if v.username == username]}")
 
-                elif summary_action == "Pot":
+                elif delete_action == "Pot":
                     print_slow("Delete Pot")
                     break
 
-                elif summary_action == "Transaction":
+                elif delete_action == "Transaction":
                     print_slow("Delete Transaction")
                     break
 
-                elif summary_action == "Forecast":
+                elif delete_action == "Forecast":
                     print_slow("Delete Forecast")
                     break
 
+                elif delete_action == "Exit":
+                    print()
+                    break
+
                 else:
-                    print_slow("Input not recognized")
+                    print_slow_nospace("\nInput not recognized")
 
             continue
 
         elif action == "Instructions":
+            print_slow_nospace("\n\033[1;31mInstructions\033[0m")
             print_slow(instructions())
 
         elif action == "Exit":
@@ -419,7 +436,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 # are now present (or past), then the programme should ask the user to update and then approve the forecasts. These will be updated
 # in the SQL database as transactions.
 
-# Create/Improve print and reporting functions using Tabulate
 # Add Exit function to "New" and "Delete"
 # Continue to Write Delete Function. Start from "Pots"
 # Write Forecasting Function
