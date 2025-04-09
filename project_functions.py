@@ -1,10 +1,47 @@
 import datetime, os, sqlite3
-from project_classes import User, Vault, Pot, Transaction
+from project_classes import User, Vault, Pot, Transaction, Forecast
 from tabulate import tabulate
 from time import sleep
 
 import warnings
 warnings.filterwarnings("ignore", message="The default datetime adapter is deprecated", category=DeprecationWarning)
+
+def submit_forecast(forecast_name, x, pot, vault, user, date, amount):
+    # Collect forecast id
+    forecast_id = x + 1
+
+    # Collect forecast type
+    while True:
+        types = ["in", "out"]
+        print_slow('\nPlease define the type of forecast. "in" or "out": ')
+        forecast_type = input()
+        if forecast_type not in types:
+            print_slow("\nincorrect forecast reference")
+        else:
+            break
+        
+    if forecast_type == "out":
+        amount = amount * -1
+    else:
+        pass
+
+    #Input all information into the Class
+    forecast = Forecast(forecast_id=forecast_id, forecast_name=forecast_name, date=date, pot=pot, vault=vault, type=forecast_type, amount=amount, user=user)
+    forecast_data = [(forecast_id, forecast_name, date, pot.pot_id, vault.vault_id, forecast_type, amount, user.username)]
+    
+    if forecast:
+        print_slow("\nThanks, your forecast has been created succesfully")
+        # Establish a connection to the Database
+        db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+        con = sqlite3.connect(db_path)
+        cur = con.cursor()
+        # save transaction to database
+        cur.executemany("INSERT INTO forecasts VALUES(?, ?, ?, ?, ?, ?, ?, ?)", forecast_data)
+        con.commit()
+    else:
+        print_slow("ERROR: forecast not created succesfully")
+
+    return forecast
 
 def submit_transaction(x, pot, vault, user):
     # Collect transaction name
@@ -444,5 +481,16 @@ def count_transactions():
     # Search the database
     res = cur.execute("SELECT * FROM transactions")
     returned_transactions = res.fetchall()
-    # Calculate Length of returned pots
+    # Calculate Length of returned transactions
     return len(returned_transactions)
+
+def count_forecasts():
+    # Establish Database Connection
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    # Search the database
+    res = cur.execute("SELECT * FROM forecasts")
+    returned_forecasts = res.fetchall()
+    # Calculate Length of returned forecasts
+    return len(returned_forecasts)

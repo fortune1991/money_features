@@ -3,7 +3,6 @@ import sqlite3
 import warnings
 warnings.filterwarnings("ignore", message="The default datetime adapter is deprecated", category=DeprecationWarning)
 
-
 def create_database():
     
     # Establish a connection to the database or create it if it doesn't exist
@@ -69,10 +68,12 @@ def create_database():
             forecast_name TEXT NOT NULL,
             date DATE NOT NULL,
             pot_id INTEGER,
+            vault_id INTEGER,
             type TEXT NOT NULL,
             amount REAL NOT NULL,
             username TEXT NOT NULL,
             FOREIGN KEY (pot_id) REFERENCES pots(pot_id),
+            FOREIGN KEY (vault_id) REFERENCES vaults(vault_id),
             FOREIGN KEY (username) REFERENCES users(username)
         )
     """)

@@ -1,6 +1,6 @@
 import datetime, os, sqlite3
 from project_classes import User, Vault, Pot, Transaction
-from project_functions import submit_transaction, print_slow, print_slow_nospace, int_validator, collect_date, convert_date, summary, create_pot, create_user, create_vault, create_profile, instructions, re_vaults, re_pots, re_transactions, count_pots, count_transactions, count_vaults, transaction_summary
+from project_functions import submit_forecast, submit_transaction, print_slow, print_slow_nospace, int_validator, collect_date, convert_date, summary, create_pot, create_user, create_vault, create_profile, instructions, re_vaults, re_pots, re_transactions, count_pots, count_transactions, count_vaults, count_forecasts, transaction_summary
 from tabulate import tabulate
 from time import sleep
 from database import create_database
@@ -200,15 +200,76 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
                 elif new_action == "Transaction":
                     print_slow("\nExcellent. Now, let me help you create a new transaction.")
-                    no_transactions = 1
+
                     while True:
                         try:
-                            for x in range(no_transactions):
+                            while True: 
+                                # Count existing transactions
+                                start_transaction = count_transactions()
+                                
+                                print_slow("What pot should this pot be assigned to?: ")
+                                pot_input = input()
+
+                                # Find the pot using a simple loop
+                                selected_pot = None
+                                selected_vault = None
+                                for pot in pots.values():
+                                    if pot.pot_name == pot_input and pot.username == user.username: 
+                                        selected_pot = pot
+                                        selected_vault = vaults.get(f"vault_{pot.vault_id}")
+                                        break
+
+                                if selected_pot:
+                                    transactions[f"transaction_{1}"] = submit_transaction(start_transaction, selected_pot, selected_vault, user)
+                                    selected_pot.pot_value()
+                                    break
+                                else:
+                                    print_slow(f"pot '{pot_input}' not found. Please enter a valid pot name.")
+                            
+                            break
+                        
+                        except ValueError as e:  
+                            print_slow(f"Error: {e}")
+                            
+                        except Exception as e:  
+                            print_slow(f"An unexpected error occurred: {e}")
+                            
+                        break
+                    
+                elif new_action == "Forecast":
+                    while True:
+                        print_slow('\nOK, would you like to submit a "Single expense" or a "Weekly expense"? or "Exit" to return back to the main menu')
+                        expense = input()
+
+                        if expense == "Single expense":
+
+                            # Collect forecast name
+                            print_slow("\nPlease provide a name reference for this Forecast: ")
+                            forecast_name = input()
+
+                            while True:
+                                single = int(input("\nWhat's the amount of your predicted expenditure? \n\n"))
+                                if single > 0:
+                                    break
+                                else:
+                                    print_slow("\namount must be greater than 0")
+                        
+                            print_slow("\nExcellent. Now we'll define when the transaction took place. Please note, all date input values must be in the format DD/MM/YY")
+                            
+                            while True:
+                                expense_date = collect_date("Date of transaction: ")
+                                today = datetime.datetime.today()
+                                if expense_date < today:
+                                    print_slow("\nInvalid Date, must be in the future for a forecast")
+                                else:
+                                    break
+
+                            try:
                                 while True: 
                                     # Count existing transactions
-                                    start_transaction = count_transactions()
+                                    start_forecast = count_forecasts()
                                     
-                                    print_slow("What pot should this pot be assigned to?: ")
+                                    print_slow("\nWhat pot should this pot be assigned to?: ")
                                     pot_input = input()
 
                                     # Find the pot using a simple loop
@@ -221,44 +282,32 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                                             break
 
                                     if selected_pot:
-                                        transactions[f"transaction_{x+1}"] = submit_transaction(start_transaction, selected_pot, selected_vault, user)
+                                        forecasts[f"forecast_{1}"] = submit_forecast(forecast_name, start_forecast, selected_pot, selected_vault, user, expense_date, single)
                                         selected_pot.pot_value()
                                         break
                                     else:
                                         print_slow(f"pot '{pot_input}' not found. Please enter a valid pot name.")
                                         
-                            action = ""
-                            break
-                        
-                        except ValueError as e:  
-                            print_slow(f"Error: {e}")
                             
-                        except Exception as e:  
-                            print_slow(f"An unexpected error occurred: {e}")
+                            except ValueError as e:  
+                                print_slow(f"Error: {e}")
+                                
+                            except Exception as e:  
+                                print_slow(f"An unexpected error occurred: {e}")
                             
-                    break
-                    
-                elif new_action == "Forecast":
-                    while True:
-                        print_slow('\nOK, would you like to submit a "Single expense" or a "Weekly expense"? or "Exit" to return back to the main menu')
-                        expense = input()
+                            
+                        elif expense == "Weekly expense":
+                            # Collect forecast name
+                            print_slow("\nPlease provide a name reference for this Forecast: ")
+                            forecast_name = input()
 
-                        if expense == "Single expense":
-                            single = int(input("\nWhat's the amount of your predicted expenditure? \n\n"))
-                            print_slow("\nExcellent. Now we'll define when the transaction took place. Please note, all date input values must be in the format DD/MM/YY")
-                            
                             while True:
-                                expense_date = collect_date("Date of transaction: ")
-                                today = datetime.datetime.today()
-                                if expense_date < today:
-                                    print_slow("\nInvalid Date")
-                                else:
-                                    print_slow(f"\n{str(today)}")
-                                    print_slow("Single expense recorded")
+                                weekly = int(input("\nWhat's your predicted weekly expenditure? "))
+                                if weekly > 0:
                                     break
-                            
-                        elif expense == "Weekly expense":    
-                            weekly = int(input("\nWhat's your predicted weekly expenditure? "))
+                                else:
+                                    print_slow("\namount must be greater than 0")
+
                             no_weeks = int(input("\nHow many weeks is this for? "))
                             print_slow("\nExcellent. Now we'll define when the transaction took place. Please note, all date input values must be in the format DD/MM/YY")
                             
@@ -301,7 +350,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     summary(vaults, pots)
                     break
 
-                elif summary_action == "Forecast Summary":
+                elif summary_action == "Forecast Summary": #UPDATE
                     print_slow("\nForecast Summary")
                     break
 

@@ -111,7 +111,8 @@ class Pot:
         self.vault = vault  # Composition used instead of inheritence: Pot has a Vault object instance
         self.vault_id = vault.vault_id # vault_id as string
         self.amount = amount
-        self.transactions = [] # List only contains transactions that need processing (i.e. subtracting or adding from pot amount)
+        self.transactions = [] # List only contains transactions that need processing (i.e. subtracting or adding from pot amount) - This could be deleted?
+        self.forecasts = [] # This could be deleted?
         self.user = user # Composition used instead of inheritence: Vault has a User object instance
         self.username = user.username # variable to store username as a string (not the object instance)
 
@@ -127,6 +128,16 @@ class Pot:
         if not isinstance(transaction, Transaction):
             raise ValueError("transaction must be an instance of the Transaction class!")
         self.transactions.append(transaction)
+
+    def add_forecast(self, forecast):
+        """
+        Add a forecast instance to the pots list of forecasts.
+
+        :param forecast: The forecast instance to add.
+        """
+        if not isinstance(forecast, Forecast):
+            raise ValueError("forecast must be an instance of the Forecast class!")
+        self.forecasts.append(forecast)
     
     def pot_value(self):
         """
@@ -183,3 +194,43 @@ class Transaction:
         
         # Add this transaction to the pots list of transactions
         pot.add_transaction(self)
+
+class Forecast:
+    def __init__(self, forecast_id, forecast_name, date, pot, vault, user, type="out", amount=0.00):
+        """
+        Initialize a Forecast object.
+
+        :param transaction_id: The ID of the forecast (must be an integer and unique to the transaction).
+        :param forecast_name: Description of the forecast
+        :param date: date the forecast occured
+        :param amount: The amount of the forecast. Default is 0.00.
+        """
+
+        # Validations
+        if not isinstance(forecast_id, int):
+            raise ValueError("Forecast ID must be an integer value!")
+
+        if not isinstance(date, datetime.date):
+            raise ValueError("Must be a valid date object!")
+        
+        if not isinstance(pot, Pot):  
+            raise ValueError("pot must be an instance of the Pot class!")
+        
+        if type not in ["in", "out"]:
+            raise ValueError('Forecast type must be either "in" or "out"!')
+        
+         # Assign unique Pot attributes
+        self.forecast_id = forecast_id
+        self.forecast_name = forecast_name
+        self.date = date
+        self.pot = pot  # Composition used instead of inheritence: Transaction has a Pot object instance
+        self.pot_id = pot.pot_id # String of pot_id
+        self.vault = vault  # Composition used instead of inheritence: Transaction has a Pot object instance
+        self.vault_id = vault.vault_id # String of pot_id
+        self.type = type
+        self.amount = amount
+        self.user = user # Composition used instead of inheritence: Vault has a User object instance
+        self.username = user.username # variable to store username as a string (not the object instance)
+        
+        # Add this forecast to the pots list of forecasts
+        pot.add_forecast(self)
