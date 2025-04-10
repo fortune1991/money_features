@@ -6,24 +6,9 @@ from time import sleep
 import warnings
 warnings.filterwarnings("ignore", message="The default datetime adapter is deprecated", category=DeprecationWarning)
 
-def submit_forecast(forecast_name, x, pot, vault, user, date, amount):
+def submit_forecast(forecast_name, x, pot, vault, user, date, amount, forecast_type):
     # Collect forecast id
     forecast_id = x + 1
-
-    # Collect forecast type
-    while True:
-        types = ["in", "out"]
-        print_slow('\nPlease define the type of forecast. "in" or "out": ')
-        forecast_type = input()
-        if forecast_type not in types:
-            print_slow("\nincorrect forecast reference")
-        else:
-            break
-        
-    if forecast_type == "out":
-        amount = amount * -1
-    else:
-        pass
 
     #Input all information into the Class
     forecast = Forecast(forecast_id=forecast_id, forecast_name=forecast_name, date=date, pot=pot, vault=vault, type=forecast_type, amount=amount, user=user)
@@ -180,6 +165,14 @@ def transaction_summary(transactions):
 
     print(f"\n{tabulate(table, headers=["transaction_id","transaction_name", "date", "amount"], tablefmt="heavy_grid")}\n")
     
+def forecast_summary(forecasts): 
+
+    table = []
+    for forecast in forecasts.values():
+        row = [forecast.forecast_id, forecast.forecast_name, forecast.date, forecast.amount]
+        table.append(row)
+
+    print(f"\n{tabulate(table, headers=["forecast_id","forecast_name", "date", "amount"], tablefmt="heavy_grid")}\n")
 
 def create_user(*args):
     if args:
@@ -418,6 +411,38 @@ def re_pots(vaults, vault_ids, user):
 
     con.close()
     return pots, pot_ids
+
+def re_forecasts(pots, vaults, pot_ids, user):
+    # Establish Database Connection
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    # Create forecasts and forecast_id variables
+    forecasts = {}
+    forecast_ids = []
+    # Searcb the pots database for all information for defined pot_ids
+    for pot in pot_ids:
+        res = cur.execute("SELECT * FROM forecasts WHERE pot_id = ?", (pot,))
+        returned_forecasts = res.fetchall()
+
+        for forecast in returned_forecasts:
+            # Create variables
+                forecast_id = int(forecast[0])
+                forecast_name = forecast[1]
+                date = convert_date(forecast[2])
+                type = (forecast[5])
+                amount = int(forecast[6])
+                pot = pots[f"pot_{forecast[3]}"] # Dictionary key format is "Pot_1: Object"
+                vault = vaults[f"vault_{forecast[4]}"] # Dictionary key format is "Vault_1: Object"
+                # Create forecast instance
+                forecast = Forecast(forecast_id=forecast_id, forecast_name=forecast_name, date=date, pot=pot, vault=vault, type=type, amount=amount, user=user)
+                # Add instance to transactions object dictionary
+                forecasts[f"forecast_{forecast.forecast_id}"] = forecast
+                # Append transaction_id to list
+                forecast_ids.append(forecast_id)
+
+    con.close()
+    return forecasts, forecast_ids
 
 def re_transactions(pots, vaults, pot_ids, user):
     # Establish Database Connection

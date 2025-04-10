@@ -1,6 +1,6 @@
 import datetime, os, sqlite3
 from project_classes import User, Vault, Pot, Transaction
-from project_functions import submit_forecast, submit_transaction, print_slow, print_slow_nospace, int_validator, collect_date, convert_date, summary, create_pot, create_user, create_vault, create_profile, instructions, re_vaults, re_pots, re_transactions, count_pots, count_transactions, count_vaults, count_forecasts, transaction_summary
+from project_functions import submit_forecast, submit_transaction, print_slow, print_slow_nospace, int_validator, collect_date, convert_date, summary, create_pot, create_user, create_vault, create_profile, instructions, re_vaults, re_pots, re_transactions, re_forecasts, count_pots, count_transactions, count_vaults, count_forecasts, transaction_summary, forecast_summary
 from tabulate import tabulate
 from time import sleep
 from database import create_database
@@ -32,7 +32,6 @@ Welcome to Money Pots, your savings and budgeting calculator.""")
 
         #log user in
         while True:
-
             # Establish a connection to the Database
             db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
             con = sqlite3.connect(db_path)
@@ -71,8 +70,29 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     pass
                 else:
                     transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
+                #reinstantiate forecasts
+                forecast_exists = False
+                res = cur.execute("SELECT * FROM forecasts")
+                returned_forecasts = res.fetchall()
+                if len(returned_forecasts) > 0:
+                    forecast_exists = True
+                if forecast_exists == False:
+                    pass
+                else:
+                    forecasts, forecast_ids = re_forecasts(pots, vaults, pot_ids, user)
 
-                # Update Pots and Vaults values - UPDATE THIS LOGIC, SO IT ONLY UPDATES VALUES BASED ON TODAYS DATE (NOT FUTURE ONES)
+                # Query forecasts to see if any of these are now in the past
+                today = datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+                
+                res = cur.execute("SELECT * FROM forecasts WHERE date < ?", (today,))
+                returned_forecasts_updated = res.fetchall()
+                
+                if returned_forecasts_updated != []:
+                    # Submit these forecasts as transactions
+                    pass
+                    # Delete these forecasts from the database
+
+                # Update Pots and Vaults values, using class methods
 
                 for pot in pots.values():
                     pot.pot_value()
@@ -253,6 +273,21 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                                     break
                                 else:
                                     print_slow("\namount must be greater than 0")
+
+                            # Collect forecast type
+                            while True:
+                                types = ["in", "out"]
+                                print_slow('\nPlease define the type of forecast. "in" or "out": ')
+                                forecast_type = input()
+                                if forecast_type not in types:
+                                    print_slow("\nincorrect forecast reference")
+                                else:
+                                    break
+                                
+                            if forecast_type == "out":
+                                single = single * -1
+                            else:
+                                pass
                         
                             print_slow("\nExcellent. Now we'll define when the transaction took place. Please note, all date input values must be in the format DD/MM/YY")
                             
@@ -282,7 +317,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                                             break
 
                                     if selected_pot:
-                                        forecasts[f"forecast_{1}"] = submit_forecast(forecast_name, start_forecast, selected_pot, selected_vault, user, expense_date, single)
+                                        forecasts[f"forecast_{1}"] = submit_forecast(forecast_name, start_forecast, selected_pot, selected_vault, user, expense_date, single, forecast_type)
                                         selected_pot.pot_value()
                                         break
                                     else:
@@ -306,20 +341,68 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                                 if weekly > 0:
                                     break
                                 else:
-                                    print_slow("\namount must be greater than 0")
+                                    print_slow("\nAmount must be greater than 0")
+
+                            # Collect forecast type
+                            while True:
+                                types = ["in", "out"]
+                                print_slow('\nPlease define the type of forecast. "in" or "out": ')
+                                forecast_type = input()
+                                if forecast_type not in types:
+                                    print_slow("\nincorrect forecast reference")
+                                else:
+                                    break
+                                
+                            if forecast_type == "out":
+                                weekly = weekly * -1
+                            else:
+                                pass
 
                             no_weeks = int(input("\nHow many weeks is this for? "))
                             print_slow("\nExcellent. Now we'll define when the transaction took place. Please note, all date input values must be in the format DD/MM/YY")
                             
                             while True:
-                                expense_start_date = collect_date("Date of transaction: ")
+                                expense_date = collect_date("Date of transaction: ")
                                 today = datetime.datetime.today()
-                                if expense_start_date < today:
-                                    print_slow("\nInvalid Date")
+                                date_list = {}
+                                if expense_date < today:
+                                    print_slow("\nInvalid Date, must be in the future for a forecast")
                                 else:
-                                    print_slow(f"\n{str(today)}")
-                                    print_slow("Weekly expense recorded")
+                                    for i in range (0, no_weeks, 1):
+                                        date = expense_date + datetime.timedelta(days=(7*i))
+                                        date_list[i] = date
                                     break
+
+                            try:
+                                while True: 
+                                    start_forecast = count_forecasts()
+                                    
+                                    print_slow("\nWhat pot should this pot be assigned to?: ")
+                                    pot_input = input()
+
+                                    # Find the pot using a simple loop
+                                    selected_pot = None
+                                    selected_vault = None
+                                    for pot in pots.values():
+                                        if pot.pot_name == pot_input and pot.username == user.username: 
+                                            selected_pot = pot
+                                            selected_vault = vaults.get(f"vault_{pot.vault_id}")
+                                            break
+
+                                    if selected_pot:
+                                        for key, date in date_list.items():
+                                            forecasts[f"forecast_{key}"] = submit_forecast(forecast_name, (start_forecast + key), selected_pot, selected_vault, user, date, weekly, forecast_type)
+                                            selected_pot.pot_value()
+                                        break
+                                    else:
+                                        print_slow(f"pot '{pot_input}' not found. Please enter a valid pot name.")
+                                        
+                            
+                            except ValueError as e:  
+                                print_slow(f"Error: {e}")
+                                
+                            except Exception as e:  
+                                print_slow(f"An unexpected error occurred: {e}")
                             
                         elif expense == "Exit":
                             print()
@@ -343,15 +426,19 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
         if action == "Summary":
             while True:
-                print_slow('\n\033[1;31mSummary Menu\033[0m\n\nWhat type of summary would you like to create? \n\n"Balance Summary" to show your vaults and pots balances, \n"Forecast Summary" to show your predicted future balances based on your forecast expenditure, \n"Transaction Summary" to show a list of all your recorded transactions, \n"Exit" to return back to the main menu')
+                print_slow('\n\033[1;31mSummary Menu\033[0m\n\nWhat type of summary would you like to create? \n\n" Current Balance Summary" to show your vaults and pots balances, \n"Forecasted Balance Summary" to show your vaults and pots balances in future weeks, \n"Forecast Summary" to show your predicted future balances based on your forecast expenditure, \n"Transaction Summary" to show a list of all your recorded transactions, \n"Exit" to return back to the main menu')
                 summary_action = input()
 
-                if summary_action == "Balance Summary":
+                if summary_action == "Current Balance Summary":
+                    summary(vaults, pots)
+                    break
+
+                if summary_action == "Forecasted Balance Summary":
                     summary(vaults, pots)
                     break
 
                 elif summary_action == "Forecast Summary": #UPDATE
-                    print_slow("\nForecast Summary")
+                    forecast_summary(forecasts)
                     break
 
                 elif summary_action == "Transaction Summary":
