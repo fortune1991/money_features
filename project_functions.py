@@ -156,14 +156,17 @@ def int_validator():
 
 def collect_date(message):
     while True:
-        print_slow(message)
         try:
-            date_input = input()
-            date = datetime.datetime.strptime(date_input,"%d/%m/%y")
-            break 
+            # Print prompt and get input
+            print_slow(message)  # Temporarily replace print_slow for testing
+            date_input = input().strip()  # .strip() removes extra whitespace
+            
+            # Try parsing the date
+            date = datetime.datetime.strptime(date_input, "%d/%m/%y")
+            return date  # Exit on success
+            
         except ValueError as err:
-            print_slow(err)
-    return date
+            print_slow_nospace(f"\nInvalid date: {err}. Please use DD/MM/YY format\n")
 
 def convert_date(string):
     try:
@@ -268,11 +271,6 @@ def create_pot(x, vault, user):
     pot_name = input()
     # Collect pot id
     pot_id = x + 1
-    # Collect start date data and create date object
-    print_slow("\nExcellent. Now we'll define when the pot will be in use. Please note, all date input values must be in the format DD/MM/YY")
-    start_date = collect_date("What is the start date that this pot will be active?: ")
-    # Collect end date data and create date object
-    end_date = collect_date("\nWhat is the end date that this pot will be active?: ")
     # Collect pot amount
     print_slow("\nWhat is the amount of money in the pot?: ")
     while True:
@@ -282,7 +280,7 @@ def create_pot(x, vault, user):
         else:
             print_slow("\namount must be greater than 0") 
     #Input all information into the Class
-    pot = Pot(pot_id=pot_id, pot_name=pot_name, start=start_date, end=end_date, vault=vault, amount=amount, user=user)
+    pot = Pot(pot_id=pot_id, pot_name=pot_name, vault=vault, amount=amount, user=user)
     if pot:
         print_slow("\nThanks, your pot has been created succesfully")
     else:
@@ -295,13 +293,8 @@ def create_vault(x, user):
     vault_name = input()
     # Collect vault id
     vault_id = x + 1
-    # Collect start date data and create date object
-    print_slow("\nExcellent. Now we'll define when the vault will be in use. Please note, all date input values must be in the format DD/MM/YY")
-    start_date = collect_date("What is the start date that this vault will be active?: ")
-    # Collect end date data and create date object
-    end_date = collect_date("\nWhat is the end date that this vault will be active?: ")
     #Input all information into the Class
-    vault = Vault(vault_id=vault_id, vault_name=vault_name, start=start_date, end=end_date, user=user)
+    vault = Vault(vault_id=vault_id, vault_name=vault_name, user=user)
     
     if vault:
         print_slow("\nThanks, your vault has been created succesfully")
@@ -331,7 +324,6 @@ def create_profile():
     
     try:
         for x in range(no_vaults):
-            print_slow(f"\nVault {(x+1)+start_vault}")
             vaults["vault_{0}".format((x+1)+start_vault)] = create_vault((x+start_vault), user)
     except ValueError as e:  
         print_slow(f"\nError: {e}")
@@ -346,10 +338,8 @@ def create_profile():
     while True:
         try:
             for x in range(no_pots):
-                print_slow(f"\nPot {(x+1)+start_pot}")
-
                 while True: 
-                    print_slow("What vault should this pot be assigned to?: ")
+                    print_slow("\nWhat vault should this pot be assigned to?: ")
                     vault_input = input()
 
                     # Find the vault using a simple loop
@@ -384,15 +374,15 @@ def create_profile():
     # Insert vaults data into the database
     vaults_data = []
     for vault in vaults.values():
-        vaults_data.append((vault.vault_id, vault.vault_name, vault.start, vault.end, vault.username))
+        vaults_data.append((vault.vault_id, vault.vault_name, vault.username))
 
-    cur.executemany("INSERT INTO vaults VALUES(?, ?, ?, ?, ?)", vaults_data)
+    cur.executemany("INSERT INTO vaults VALUES(?, ?, ?)", vaults_data)
     # Insert pots data into the database
     pots_data = []
     for pot in pots.values():
-        pots_data.append((pot.pot_id, pot.pot_name, pot.start, pot.end, pot.vault_id, pot.amount, pot.username))
+        pots_data.append((pot.pot_id, pot.pot_name, pot.vault_id, pot.amount, pot.username))
 
-    cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?, ?, ?)", pots_data)
+    cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?)", pots_data)
     
     # Close the database connections
     con.commit()
@@ -401,13 +391,12 @@ def create_profile():
     return user, vaults, pots
 
 def instructions():
-    return """
-In this program, your savings are organized into two categories: vaults and pots.
+    return """In this program, your savings are organized into two categories: vaults and pots.
 
 - A vault is a collection of Pots
 - A pot represents an individual budget within a Vault
 
-For example, between 17/03/25 and 17/01/26, you might create a 'Travelling' vault
+For example, you might create a 'Travelling' vault
 to manage your holiday expenses. This vault could contain multiple pots, each
 representing a budget for a different destination. Attached to the pots can be either 
 "transactions" or "forecasts" to represent actual or predicted expenditure, thus creating 
@@ -425,11 +414,7 @@ where you can choose from the following options:
 The data collected is stored in an SQL database. The user can log back in when the programme
 is re-executed to start where they left off. 
 
-Please note, the date boundries entered for the vaults, pots and transactions are all bound together.
-So you can't associate a pot for use in the year 2026, if it's associated vault ends in 2025.
-
-We hope you enjoy using Money Pots!
-"""
+We hope you enjoy using Money Pots!"""
 
 def re_vaults(name, user):
 
@@ -448,10 +433,8 @@ def re_vaults(name, user):
         vault_ids.append(int(vault[0]))
         vault_id = int(vault[0])
         vault_name = vault[1]
-        start_date = convert_date(vault[2])
-        end_date = convert_date(vault[3])
         # Create vault instance
-        vault = Vault(vault_id=vault_id, vault_name=vault_name, start=start_date, end=end_date, user=user)
+        vault = Vault(vault_id=vault_id, vault_name=vault_name, user=user)
         # Add instance to vaults object dictionary
         vaults["vault_{0}".format(vault_id)] = vault
 
@@ -476,12 +459,10 @@ def re_pots(vaults, vault_ids, user):
             # Create variables
             pot_id = int(pot[0])
             pot_name = pot[1]
-            start_date = convert_date(pot[2])
-            end_date = convert_date(pot[3])
-            amount = int(pot[5])
-            vault = vaults[f"vault_{pot[4]}"] # Dictionary key format is "Vault_1: Object"
+            amount = int(pot[3])
+            vault = vaults[f"vault_{pot[2]}"] # Dictionary key format is "Vault_1: Object"
             # Create pot instance
-            pot = Pot(pot_id=pot_id, pot_name=pot_name, start=start_date, end=end_date, vault=vault, amount=amount, user=user)
+            pot = Pot(pot_id=pot_id, pot_name=pot_name, vault=vault, amount=amount, user=user)
             # Add instance to pots object dictionary
             pots[f"pot_{pot.pot_id}"] = pot
             # Append pot_id to list

@@ -11,14 +11,12 @@ class User:
         self.username = username
     
 class Vault:
-    def __init__(self, vault_id, vault_name, start, end, user):
+    def __init__(self, vault_id, vault_name, user):
         """
         Initialize a Vault object.
 
         :param vault_id: The ID of the vault (must be an integer).
         :param vault_name: The name of the vault.
-        :param start: The start date of the vault (must be a datetime.date object).
-        :param end: The end date of the vault (must be a datetime.date object).
         :param username: The username of the user associated with the vault (optional).
                        If not provided, it will use the username from the User class.
         """
@@ -26,15 +24,6 @@ class Vault:
         # Validations
         if not isinstance(vault_id, int):
             raise ValueError("ID must be an integer value!")
-
-        if not isinstance(start, datetime.date):
-            raise ValueError("start must be a valid date object!")
-
-        if not isinstance(end, datetime.date):
-            raise ValueError("end must be a valid date object!")
-
-        if start > end:
-            raise ValueError("start date cannot be later than end date!")
         
         if not isinstance(user, User):  # Validate that user is a User object
             raise ValueError("user must be an instance of the User class!")
@@ -42,14 +31,12 @@ class Vault:
         # Assign to self object
         self.vault_id = vault_id
         self.vault_name = vault_name
-        self.start = start
-        self.end = end
         self.user = user # Composition used instead of inheritence: Vault has a User object instance
         self.username = user.username # variable to store username as a string (not the object instance)
         self.pots = []  # List to store associated Pot instances
 
     def __str__(self):
-        return f"Vault(vault_id={self.vault_id}, vault_name={self.vault_name}, start={self.start}, end={self.end}, username={self.username})"
+        return f"Vault(vault_id={self.vault_id}, vault_name={self.vault_name}, username={self.username})"
     
     def add_pot(self, pot):
         """
@@ -81,14 +68,12 @@ class Vault:
         return sum
     
 class Pot:
-    def __init__(self, pot_id, pot_name, start, end, vault, user, amount=0.00):
+    def __init__(self, pot_id, pot_name, vault, user, amount=0.00):
         """
         Initialize a Pot object.
 
         :param pot_id: The ID of the pot (must be an integer and unique to Pot).
         :param pot_name: The name of the pot.
-        :param start: The start date of the pot (must be a datetime.date object).
-        :param end: The end date of the pot (must be a datetime.date object).
         :param vault: The Vault object associated with the pot.
         :param username: The username of the user associated with the pot (optional).
         :param amount: The amount of the pot. Default is 0.00.
@@ -97,15 +82,6 @@ class Pot:
         # Validations
         if not isinstance(pot_id, int):
             raise ValueError("Pot ID must be an integer value!")
-
-        if not isinstance(start, datetime.date):
-            raise ValueError("start must be a valid date object!")
-
-        if not isinstance(end, datetime.date):
-            raise ValueError("end must be a valid date object!")
-
-        if start > end:
-            raise ValueError("start date cannot be later than end date!")
         
         if not isinstance(vault, Vault):  # Validate that vault is a Vault object
             raise ValueError("vault must be an instance of the Vault class!")
@@ -113,8 +89,6 @@ class Pot:
          # Assign unique Pot attributes
         self.pot_id = pot_id
         self.pot_name = pot_name
-        self.start = start
-        self.end = end
         self.vault = vault  # Composition used instead of inheritence: Pot has a Vault object instance
         self.vault_id = vault.vault_id # vault_id as string
         self.amount = amount

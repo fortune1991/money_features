@@ -193,12 +193,10 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     vaults[f"vault_{(vault_count + 1)}"] = create_vault(vault_count, user)
                     vault_data = [(vaults[f"vault_{(vault_count + 1)}"].vault_id,
                     vaults[f"vault_{(vault_count + 1)}"].vault_name,
-                    vaults[f"vault_{(vault_count + 1)}"].start,
-                    vaults[f"vault_{(vault_count + 1)}"].end,
                     vaults[f"vault_{(vault_count + 1)}"].username)]
 
                     # Insert vaults data into the database
-                    cur.executemany("INSERT INTO vaults VALUES(?, ?, ?, ?, ?)", vault_data)
+                    cur.executemany("INSERT INTO vaults VALUES(?, ?, ?)", vault_data)
                     con.commit()
                     
                     # Create associated pots
@@ -210,14 +208,12 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
                     pot_data = [(pots[f"pot_{(pot_count + 1)}"].pot_id, 
                     pots[f"pot_{(pot_count + 1)}"].pot_name, 
-                    pots[f"pot_{(pot_count + 1)}"].start, 
-                    pots[f"pot_{(pot_count + 1)}"].end, 
                     pots[f"pot_{(pot_count + 1)}"].vault_id, 
                     pots[f"pot_{(pot_count + 1)}"].amount, 
                     pots[f"pot_{(pot_count + 1)}"].username)]
 
                     # Insert pots data into the database
-                    cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?, ?, ?)", pot_data)
+                    cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?)", pot_data)
                     con.commit()
 
                     action = ""
@@ -240,14 +236,12 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
                                 pot_data = [(pots[f"pot_{(pot_count + 1)}"].pot_id, 
                                 pots[f"pot_{(pot_count + 1)}"].pot_name, 
-                                pots[f"pot_{(pot_count + 1)}"].start, 
-                                pots[f"pot_{(pot_count + 1)}"].end, 
                                 pots[f"pot_{(pot_count + 1)}"].vault_id, 
                                 pots[f"pot_{(pot_count + 1)}"].amount, 
                                 pots[f"pot_{(pot_count + 1)}"].username)]
 
                                 # Insert pots data into the database
-                                cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?, ?, ?)", pot_data)
+                                cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?)", pot_data)
                                 con.commit()
                                 break
 
@@ -473,7 +467,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
         if action == "Summary":
             while True:
-                print_slow('\n\033[1;31mSummary Menu\033[0m\n\nWhat type of summary would you like to create? \n\n"Current Balance Report" to show your vaults and pots balances today, \n"Forecasted Balance Report" to show your vaults or pots balances from a given start date until the final forecast estimate, \n"Forecast List" to show a list of your predicted forecast expenditures, \n"Transaction list" to show a list of all your recorded transactions, \n"Exit" to return back to the main menu')
+                print_slow('\n\033[1;31mSummary Menu\033[0m\n\nWhat type of summary would you like to create? \n\n"Current Balance Report" to show your vaults and pots balances today, \n"Forecast Balance Report" to show your vaults or pots balances from a given start date until the final forecast estimate, \n"Forecast List" to show a list of your predicted forecast expenditures, \n"Transaction list" to show a list of all your recorded transactions, \n"Exit" to return back to the main menu')
                 summary_action = input()
 
                 if summary_action == "Current Balance Report":
@@ -557,7 +551,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             try: 
                                 biggest_date = vault_forecasts[0][2]
                             except IndexError as e:  
-                                print_slow(f"Error: {e}")
+                                print_slow(f"\nError: {e}")
                                 print_slow("No forecasts recorded for this Vault")
                                 break
 
@@ -595,7 +589,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             try: 
                                 biggest_date = pot_forecasts[0][2]
                             except IndexError as e:  
-                                print_slow(f"Error: {e}")
+                                print_slow(f"\nError: {e}")
                                 print_slow("No forecasts recorded for this Vault")
                                 break
                             

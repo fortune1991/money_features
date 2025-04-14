@@ -22,8 +22,6 @@ def create_database():
         CREATE TABLE pots (
             pot_id INTEGER PRIMARY KEY,
             pot_name TEXT NOT NULL,
-            start DATE NOT NULL,
-            end DATE NOT NULL,
             vault_id INTEGER,
             amount REAL NOT NULL,
             username TEXT NOT NULL,
@@ -37,8 +35,6 @@ def create_database():
         CREATE TABLE vaults (
             vault_id INTEGER PRIMARY KEY,
             vault_name TEXT NOT NULL,
-            start DATE NOT NULL,
-            end DATE NOT NULL,
             username TEXT NOT NULL,
             FOREIGN KEY (username) REFERENCES users(username)
         )
