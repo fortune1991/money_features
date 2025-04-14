@@ -62,15 +62,22 @@ class Vault:
         self.pots.append(pot)
 
     def vault_value(self):
+        """Returns current value of vault (sum of all pot current values)"""
+        return sum(pot.pot_value() for pot in self.pots)
+
+    def vault_forecast_value(self, date):
         """
         Sum the amounts of all Pot instances associated with this Vault.
 
         :return: The sum of the amounts of all pots.
         """
         sum = 0
+        
         if len(self.pots) > 0:
             for pot in self.pots:
-                sum += pot.amount
+                for forecast in pot.forecasts:
+                    pot_value = pot.pot_forecast_value(date)
+                    sum += pot_value
         return sum
     
 class Pot:
@@ -111,8 +118,8 @@ class Pot:
         self.vault = vault  # Composition used instead of inheritence: Pot has a Vault object instance
         self.vault_id = vault.vault_id # vault_id as string
         self.amount = amount
-        self.transactions = [] # List only contains transactions that need processing (i.e. subtracting or adding from pot amount) - This could be deleted?
-        self.forecasts = [] # This could be deleted?
+        self.transactions = [] # List to store associated transactions
+        self.forecasts = [] 
         self.user = user # Composition used instead of inheritence: Vault has a User object instance
         self.username = user.username # variable to store username as a string (not the object instance)
 
@@ -140,20 +147,21 @@ class Pot:
         self.forecasts.append(forecast)
     
     def pot_value(self):
-        """
-        Sum the amounts of all transaction instances associated with this Pot. Then subtract this from the pot_amount
-
-        :return: The sum of the amounts of all pots.
-        """
-        sum = 0
+        """Returns current value (base amount + transactions to date)"""
+        total = self.amount
         today = datetime.datetime.today()
-        if len(self.transactions) > 0:
-            for transaction in self.transactions:
-                if transaction.date <= today:
-                    sum += transaction.amount
-                    self.amount += sum
-                    self.transactions = []
-        return 
+        for transaction in self.transactions:
+            if transaction.date <= today:
+                total += transaction.amount
+        return total
+
+    def pot_forecast_value(self, date):
+        """Returns only future forecasts for this pot (no base amount, no transactions)"""
+        forecast_total = 0
+        for forecast in self.forecasts:
+            if forecast.date <= date:
+                forecast_total += forecast.amount
+        return forecast_total
             
 class Transaction:
     def __init__(self, transaction_id, transaction_name, date, pot, vault, user, type="out", amount=0.00):

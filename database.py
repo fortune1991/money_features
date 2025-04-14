@@ -64,7 +64,7 @@ def create_database():
     # Create forecasts table
     cur.execute("""
         CREATE TABLE forecasts (
-            forcast_id INTEGER PRIMARY KEY,
+            forecast_id INTEGER PRIMARY KEY,
             forecast_name TEXT NOT NULL,
             date DATE NOT NULL,
             pot_id INTEGER,

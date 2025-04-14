@@ -1,6 +1,6 @@
-import datetime, os, sqlite3
+import datetime, os, sqlite3, math
 from project_classes import User, Vault, Pot, Transaction
-from project_functions import submit_forecast, submit_transaction, print_slow, print_slow_nospace, int_validator, collect_date, convert_date, summary, create_pot, create_user, create_vault, create_profile, instructions, re_vaults, re_pots, re_transactions, re_forecasts, count_pots, count_transactions, count_vaults, count_forecasts, transaction_summary, forecast_summary
+from project_functions import submit_forecast, transfer_transaction, submit_transaction, print_slow, print_slow_nospace, int_validator, collect_date, convert_date, summary, create_pot, create_user, create_vault, create_profile, instructions, re_vaults, re_pots, re_transactions, re_forecasts, count_pots, count_transactions, count_vaults, count_forecasts, transaction_summary, forecast_summary, del_profile, del_vault, del_pot, del_transaction, del_forecast, forecast_balance_vault, forecast_balance_pot
 from tabulate import tabulate
 from time import sleep
 from database import create_database
@@ -27,6 +27,8 @@ Welcome to Money Pots, your savings and budgeting calculator.""")
         print_slow(instructions())
         
         user, vaults, pots = create_profile()
+
+        username = user.username
     
     if database_exists:
 
@@ -56,6 +58,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 print_slow("Welcome back to Money Pots")
                 #reinstantiate user
                 user = create_user(login)
+                username = user.username  # Get the current user's username
                 #reinstantiate vaults 
                 vaults, vault_ids = re_vaults(login, user)
                 #reinstantiate pots
@@ -81,16 +84,60 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 else:
                     forecasts, forecast_ids = re_forecasts(pots, vaults, pot_ids, user)
 
-                # Query forecasts to see if any of these are now in the past
+                # Query forecasts to see if any of these are now in the past. Store in updated variable
                 today = datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S')
                 
                 res = cur.execute("SELECT * FROM forecasts WHERE date < ?", (today,))
-                returned_forecasts_updated = res.fetchall()
-                
-                if returned_forecasts_updated != []:
+                past_forecasts = res.fetchall()
+                len_past_forecasts = len(past_forecasts)
+
+                if len_past_forecasts > 0:
+                    # Print message to state updated are required
+                    print_slow("\nYou have forecasted expenditure, which now needs to be confirmed. Please see below:")
+                    
                     # Submit these forecasts as transactions
-                    pass
+                    start_transaction = count_transactions()
+                    for forecast in past_forecasts:
+                        counter = 1
+                        date = convert_date(forecast[2])
+                        selected_pot = None
+                        selected_vault = None
+                        for pot in pots.values():
+                            if pot.pot_id == forecast[3] and pot.username == user.username: 
+                                selected_pot = pot
+                                selected_vault = vaults.get(f"vault_{pot.vault_id}")
+                                break
+        
+                        BOLD_RED = "\033[1;31m"
+                        RESET = "\033[0m"
+                        print_slow_nospace(f"{BOLD_RED}Forecast_ID:{RESET} {forecast[0]}{BOLD_RED} Forecast Name:{RESET} {forecast[1]}")
+                        
+                        transfer_transaction((start_transaction + counter), selected_pot, selected_vault, user, forecast[1], date, forecast[5], forecast[6])
+                        counter += 1
+
                     # Delete these forecasts from the database
+                    for forecast in past_forecasts:
+                        success = del_forecast(user,forecasts,forecast[0])
+
+                        if success:
+                            #reinstantiate forecasts
+                            forecast_exists = False
+                            res = cur.execute("SELECT * FROM forecasts")
+                            returned_forecasts = res.fetchall()
+                            if len(returned_forecasts) > 0:
+                                forecast_exists = True
+
+                            if forecast_exists == False:
+                                forecasts = {}
+                                forecast_ids = []
+
+                            else:
+                                forecasts, forecast_ids = re_forecasts(pots, vaults, pot_ids, user)
+
+                            break
+
+                        else:
+                            continue
 
                 # Update Pots and Vaults values, using class methods
 
@@ -100,11 +147,11 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 for vault in vaults.values():
                     vault.vault_value()
 
-                con.close()
+                #con.close()
                 break
 
             else:
-                con.close()
+                #con.close()
                 print_slow("\nUser doesn't exist. Respond 'Try again' 'New user' or 'Exit'")    
                 response = input()
 
@@ -426,22 +473,184 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
         if action == "Summary":
             while True:
-                print_slow('\n\033[1;31mSummary Menu\033[0m\n\nWhat type of summary would you like to create? \n\n" Current Balance Summary" to show your vaults and pots balances, \n"Forecasted Balance Summary" to show your vaults and pots balances in future weeks, \n"Forecast Summary" to show your predicted future balances based on your forecast expenditure, \n"Transaction Summary" to show a list of all your recorded transactions, \n"Exit" to return back to the main menu')
+                print_slow('\n\033[1;31mSummary Menu\033[0m\n\nWhat type of summary would you like to create? \n\n"Current Balance Report" to show your vaults and pots balances today, \n"Forecasted Balance Report" to show your vaults or pots balances from a given start date until the final forecast estimate, \n"Forecast List" to show a list of your predicted forecast expenditures, \n"Transaction list" to show a list of all your recorded transactions, \n"Exit" to return back to the main menu')
                 summary_action = input()
 
-                if summary_action == "Current Balance Summary":
+                if summary_action == "Current Balance Report":
+                    #reinstantiate vaults 
+                    vaults, vault_ids = re_vaults(username, user)
+                    
+                    #reinstantiate pots
+                    pots, pot_ids = re_pots(vaults, vault_ids, user)
+
+                    #reinstantiate transactions 
+                    transaction_exists = False
+                    res = cur.execute("SELECT * FROM transactions")
+                    returned_transactions = res.fetchall()
+                    if len(returned_transactions) > 0:
+                        transaction_exists = True
+
+                    if transaction_exists == False:
+                        transactions = {}
+                        transaction_ids = []
+
+                    else:
+                        transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
+
+                    #create balance summary
                     summary(vaults, pots)
                     break
 
-                if summary_action == "Forecasted Balance Summary":
-                    summary(vaults, pots)
+                if summary_action == "Forecast Balance Report":
+                    #reinstantiate vaults 
+                    vaults, vault_ids = re_vaults(username, user)
+                    
+                    #reinstantiate pots
+                    pots, pot_ids = re_pots(vaults, vault_ids, user)
+
+                    #reinstantiate transactions 
+                    transaction_exists = False
+                    res = cur.execute("SELECT * FROM transactions")
+                    returned_transactions = res.fetchall()
+                    if len(returned_transactions) > 0:
+                        transaction_exists = True
+
+                    if transaction_exists == False:
+                        transactions = {}
+                        transaction_ids = []
+
+                    else:
+                        transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
+                    
+                    #reinstantiate forecasts
+                    forecast_exists = False
+                    res = cur.execute("SELECT * FROM forecasts")
+                    returned_forecasts = res.fetchall()
+                    if len(returned_forecasts) > 0:
+                        forecast_exists = True
+                    if forecast_exists == False:
+                        pass
+                    else:
+                        forecasts, forecast_ids = re_forecasts(pots, vaults, pot_ids, user)
+
+                    while True:
+                        print_slow('\nWould you like to forecast the balance for a "Vault" or "Pot"?')
+                        option = input()
+
+                        if option == "Vault":
+                            print_slow("\nWhat is the name of the Vault you would like to forecast?")
+                            name = input()
+                            selected_vault = None
+                            for vault in vaults.values():
+                                if vault.vault_name == name and vault.username == user.username:
+                                    selected_vault = vault
+                            
+                            #Get list of forecasts linked to this vault                            
+                            res = cur.execute("SELECT * FROM forecasts WHERE vault_id = ?", (selected_vault.vault_id,))
+                            vault_forecasts = res.fetchall()
+                            
+                            #Find 'smallest' date
+                            print_slow("\nWhat date would you like to start the forecast from?")
+                            smallest_date = collect_date("Date of transaction: ")
+                            
+                            #Find 'biggest' date
+                            try: 
+                                biggest_date = vault_forecasts[0][2]
+                            except IndexError as e:  
+                                print_slow(f"Error: {e}")
+                                print_slow("No forecasts recorded for this Vault")
+                                break
+
+                            for forecast in vault_forecasts:
+                                if forecast[2] > biggest_date:
+                                    biggest_date = forecast[2]
+                                else:
+                                    continue
+                            biggest_date = convert_date(biggest_date)
+
+                            delta = biggest_date - smallest_date
+                            delta_days = delta.days
+                            delta_weeks = math.ceil(delta_days / 7)
+                            
+                            forecast_balance_vault(selected_vault, pots, smallest_date, delta_weeks)
+                            break
+
+                        elif option == "Pot":
+                            print_slow("\nWhat is the name of the Pot you would like to forecast?")
+                            name = input()
+                            selected_pot = None
+                            for pot in pots.values():
+                                if pot.pot_name == name and pot.username == user.username:
+                                    selected_pot = pot
+                            
+                            #Get list of forecasts linked to this pot                           
+                            res = cur.execute("SELECT * FROM forecasts WHERE pot_id = ?", (selected_pot.pot_id,))
+                            pot_forecasts = res.fetchall()
+                            
+                            #Find 'smallest' date
+                            print_slow("\nWhat date would you like to start the forecast from?")
+                            smallest_date = collect_date("Date of transaction: ")
+                            
+                            #Find 'biggest' date
+                            try: 
+                                biggest_date = pot_forecasts[0][2]
+                            except IndexError as e:  
+                                print_slow(f"Error: {e}")
+                                print_slow("No forecasts recorded for this Vault")
+                                break
+                            
+                            for forecast in pot_forecasts:
+                                if forecast[2] > biggest_date:
+                                    biggest_date = forecast[2]
+                                else:
+                                    continue
+                            biggest_date = convert_date(biggest_date)
+
+                            delta = biggest_date - smallest_date
+                            delta_days = delta.days
+                            delta_weeks = math.ceil(delta_days / 7)
+                            
+                            forecast_balance_pot(selected_pot, pots, smallest_date, delta_weeks)
+                            break
+                        else:
+                            print_slow("\nOption not recognized, please try again.")
+                            continue
+
                     break
 
-                elif summary_action == "Forecast Summary": #UPDATE
+                elif summary_action == "Forecast List":
+                    
+                    #reinstantiate forecasts
+                    forecast_exists = False
+                    res = cur.execute("SELECT * FROM forecasts")
+                    returned_forecasts = res.fetchall()
+                    if len(returned_forecasts) > 0:
+                        forecast_exists = True
+                    if forecast_exists == False:
+                        pass
+                    else:
+                        forecasts, forecast_ids = re_forecasts(pots, vaults, pot_ids, user)
+                    
+                    #create forecast summary
                     forecast_summary(forecasts)
                     break
 
-                elif summary_action == "Transaction Summary":
+                elif summary_action == "Transaction List":
+                    #reinstantiate transactions 
+                    transaction_exists = False
+                    res = cur.execute("SELECT * FROM transactions")
+                    returned_transactions = res.fetchall()
+                    if len(returned_transactions) > 0:
+                        transaction_exists = True
+
+                    if transaction_exists == False:
+                        transactions = {}
+                        transaction_ids = []
+
+                    else:
+                        transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
+
+                    #create transaction summary
                     transaction_summary(transactions)
                     break
 
@@ -460,48 +669,13 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 delete_action = input()
 
                 if delete_action == "Profile":
-                    try:
-                        # Get the username before deleting
-                        username = user.username
-
-                        # Delete all related data first
-                        cur.execute("DELETE FROM transactions WHERE username = ?", (username,))
-                        cur.execute("DELETE FROM pots WHERE username = ?", (username,))
-                        cur.execute("DELETE FROM vaults WHERE username = ?", (username,))
-
-                        # Finally, delete the user
-                        cur.execute("DELETE FROM users WHERE username = ?", (username,))
-                        
-                        con.commit()
-                        print_slow("\nProfile deleted successfully.")
-
-                    except sqlite3.Error as e:
-                        print_slow(f"\nError deleting profile: {e}")
-
+                    del_profile(user)
                     exit()
 
                 elif delete_action == "Vault":
-                    
-                    vault_name = input("\nEnter the name of the Vault you want to delete: \n\n").strip()
-                    username = user.username  # Get the current user's username
+                    success = del_vault(user,vaults) #Delete vault
 
-                    # Search for the vault that matches both the name and the username
-                    selected_vault = None
-                    for vault in vaults.values():
-                        if vault.vault_name == vault_name and vault.username == username:
-                            selected_vault = vault
-                            break
-
-                    if selected_vault:
-                        vault_id = selected_vault.vault_id
-                        # Proceed with deletion of related data first
-                        cur.execute("DELETE FROM transactions WHERE vault_id = ?", (vault_id,))
-                        cur.execute("DELETE FROM pots WHERE vault_id = ?", (vault_id,))
-
-                        # Finally delete the vault
-                        cur.execute("DELETE FROM vaults WHERE vault_id = ?", (vault_id,))
-                        con.commit()
-
+                    if success:
                         #reinstantiate vaults 
                         vaults, vault_ids = re_vaults(username, user)
                         
@@ -509,7 +683,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                         pots, pot_ids = re_pots(vaults, vault_ids, user)
 
                         #reinstantiate transactions 
-
                         transaction_exists = False
                         res = cur.execute("SELECT * FROM transactions")
                         returned_transactions = res.fetchall()
@@ -517,38 +690,23 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             transaction_exists = True
 
                         if transaction_exists == False:
-                            pass
+                            transactions = {}
+                            transaction_ids = []
 
                         else:
                             transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
 
                         print_slow("\nVault deleted succesfully")
+
                         break
 
                     else:
-                        print_slow(f"\nVault '{vault_name}' not found for user '{username}'.")
-                        print_slow_nospace(f"Available vaults for {username}: {[v.vault_name for v in vaults.values() if v.username == username]}")
+                        continue
 
                 elif delete_action == "Pot":
-                    pot_name = input("\nEnter the name of the Pot you want to delete: \n\n").strip()
-                    username = user.username  # Get the current user's username
+                    success = del_pot(user,pots)
 
-                    # Search for the pot that matches both the name and the username
-                    selected_pot = None
-                    for pot in pots.values():
-                        if pot.pot_name == pot_name and pot.username == username:
-                            selected_pot = pot
-                            break
-
-                    if selected_pot:
-                        pot_id = selected_pot.pot_id
-                        # Proceed with deletion of related data first
-                        cur.execute("DELETE FROM transactions WHERE pot_id = ?", (pot_id,))
-
-                        # Finally delete the pot
-                        cur.execute("DELETE FROM pots WHERE pot_id = ?", (pot_id,))
-                        con.commit()
-
+                    if success:
                         #reinstantiate vaults 
                         vaults, vault_ids = re_vaults(username, user)
                         
@@ -556,7 +714,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                         pots, pot_ids = re_pots(vaults, vault_ids, user)
 
                         #reinstantiate transactions 
-
                         transaction_exists = False
                         res = cur.execute("SELECT * FROM transactions")
                         returned_transactions = res.fetchall()
@@ -564,43 +721,29 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             transaction_exists = True
 
                         if transaction_exists == False:
-                            pass
+                            transactions = {}
+                            transaction_ids = []
 
                         else:
                             transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
 
-                        print_slow("\nPot deleted succesfully")
                         break
 
                     else:
-                        print_slow(f"\nPot '{pot_name}' not found for user '{username}'.")
-                        print_slow_nospace(f"Available pots for {username}: {[p.pot_name for p in pots.values() if p.username == username]}")
+                        continue
 
                 elif delete_action == "Transaction":
-                    transaction_id = int(input("\nEnter the transaction_id that you want to delete: \n\n").strip())
+                    success = del_transaction(user,transactions)
                     username = user.username  # Get the current user's username
 
-                    # Search for the transaction that matches both the id and the username
-                    selected_transaction = None
-                    for transaction in transactions.values():
-                        if transaction.transaction_id == transaction_id and pot.username == username:
-                            selected_transaction = transaction
-                            break
-
-                    if selected_transaction:
-                        
-                        # Delete the transaction
-                        cur.execute("DELETE FROM transactions WHERE transaction_id = ?", (transaction_id,))
-                        con.commit()
-
+                    if success:
                         #reinstantiate vaults 
                         vaults, vault_ids = re_vaults(username, user)
-                        
+
                         #reinstantiate pots
                         pots, pot_ids = re_pots(vaults, vault_ids, user)
 
                         #reinstantiate transactions 
-
                         transaction_exists = False
                         res = cur.execute("SELECT * FROM transactions")
                         returned_transactions = res.fetchall()
@@ -608,21 +751,42 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             transaction_exists = True
 
                         if transaction_exists == False:
-                            pass
+                            transactions = {}
+                            transaction_ids = []
 
                         else:
                             transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
 
-                        print_slow("\nTransaction deleted succesfully")
                         break
 
                     else:
-                        print_slow(f"\nTransaction '{transaction_id}' not found for user '{username}'.")
-                        print_slow_nospace(f"Available transactions for {username}: {[t.transaction_id for t in transactions.values() if t.username == username]}")
+                        continue
 
                 elif delete_action == "Forecast":
-                    print_slow("Delete Forecast")
-                    break
+                    forecast_id = int(input("\nEnter the forecast_id that you want to delete: \n\n").strip())
+                    success = del_forecast(user,forecasts,forecast_id)
+
+                    if success:
+                        #reinstantiate forecasts
+                        forecast_exists = False
+                        res = cur.execute("SELECT * FROM forecasts")
+                        returned_forecasts = res.fetchall()
+                        if len(returned_forecasts) > 0:
+                            forecast_exists = True
+
+                        if forecast_exists == False:
+                            forecasts = {}
+                            forecast_ids = []
+
+                        else:
+                            forecasts, forecast_ids = re_forecasts(pots, vaults, pot_ids, user)
+                            print_slow("\nForecast deleted succesfully")
+                        break
+
+                    else:
+                        print_slow(f"\nForecast '{forecast_id}' not found for user '{username}'.")
+                        print_slow_nospace(f"Available forecasts for {username}: {[f.forecast_id for f in forecasts.values() if f.username == username]}")
+                        continue
 
                 elif delete_action == "Exit":
                     print()

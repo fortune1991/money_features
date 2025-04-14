@@ -23,6 +23,7 @@ def submit_forecast(forecast_name, x, pot, vault, user, date, amount, forecast_t
         # save transaction to database
         cur.executemany("INSERT INTO forecasts VALUES(?, ?, ?, ?, ?, ?, ?, ?)", forecast_data)
         con.commit()
+        con.close()
     else:
         print_slow("ERROR: forecast not created succesfully")
 
@@ -83,8 +84,50 @@ def submit_transaction(x, pot, vault, user):
         # save transaction to database
         cur.executemany("INSERT INTO transactions VALUES(?, ?, ?, ?, ?, ?, ?, ?)", transaction_data)
         con.commit()
+        con.close()
     else:
         print_slow("ERROR: transaction not created succesfully")
+
+    return transaction
+
+def transfer_transaction(x, pot, vault, user, transaction_name, date, transaction_type, amount):
+    # Collect transaction id
+    transaction_id = x
+
+    # Collect transaction amount
+    print_slow(f"\nForecasted transaction amount was ${amount}. Is this correct? (Y/N)")
+    while True:
+        amount_query = input()
+        if amount_query == "Y":
+            break
+        elif amount_query == "N":
+            print_slow("\nWhat is the transaction amount?: ")
+            while True:
+                amount = int_validator()
+                if amount > 0:
+                    break
+                else:
+                    print_slow("\namount must be greater than 0")
+            break
+        else:
+            continue
+
+    #Input all information into the Class
+    transaction = Transaction(transaction_id=transaction_id, transaction_name=transaction_name, date=date, pot=pot, vault=vault, type=transaction_type, amount=amount, user=user)
+    transaction_data = [(transaction_id, transaction_name, date, pot.pot_id, vault.vault_id, transaction_type, amount, user.username)]
+    
+    if transaction:
+        print_slow("\nThanks, your transaction has been transferred succesfully")
+        # Establish a connection to the Database
+        db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+        con = sqlite3.connect(db_path)
+        cur = con.cursor()
+        # save transaction to database
+        cur.executemany("INSERT INTO transactions VALUES(?, ?, ?, ?, ?, ?, ?, ?)", transaction_data)
+        con.commit()
+        con.close()
+    else:
+        print_slow("ERROR: transaction not transferred succesfully")
 
     return transaction
 
@@ -131,10 +174,51 @@ def convert_date(string):
 
     return date
 
+def forecast_balance_vault(selected_vault, pots, smallest_date, delta_weeks):
+    date_list = [smallest_date + datetime.timedelta(days=7*i) for i in range(delta_weeks + 1)]
+    table_rows = []
+    
+    for week_num, date in enumerate(date_list, start=1):
+        # Start with current vault value (base + transactions)
+        vault_total = selected_vault.vault_value()
+        
+        # Add only future forecasts for each pot
+        for pot in pots.values():
+            if pot.vault_id == selected_vault.vault_id:
+                vault_total += pot.pot_forecast_value(date)
+        
+        table_rows.append((week_num, date, vault_total))
+
+    return print(f"\n{tabulate(table_rows, headers=["Week No.","Date", "Balance"], tablefmt="heavy_grid")}\n")
+
+def forecast_balance_pot(selected_pot, pots, smallest_date, delta_weeks):
+    date_list = [smallest_date + datetime.timedelta(days=7*i) for i in range(delta_weeks + 1)]
+    table_rows = []
+    
+    for week_num, date in enumerate(date_list, start=1):
+        # Start with current vault value (base + transactions)
+        pot_total = selected_pot.pot_value()
+        
+        # Add only future forecasts for each pot
+        for pot in pots.values():
+            if pot.pot_id == selected_pot.pot_id:
+                pot_total += pot.pot_forecast_value(date)
+        
+        table_rows.append((week_num, date, pot_total))
+
+    return print(f"\n{tabulate(table_rows, headers=["Week No.","Date", "Balance"], tablefmt="heavy_grid")}\n")
+        
 def summary(vaults, pots):
-    print()
     for i in vaults:
         vault = vaults[i]
+        
+        # Pot data
+        pot_rows = []
+        for j in pots:
+            if pots[j].vault == vault:
+                pot_value = pots[j].pot_value()
+                pot_rows.append([pots[j].pot_name, f"${pot_value}"])
+
         vault_value = vault.vault_value()
 
         # First row: Vault info, second column left blank
@@ -143,17 +227,11 @@ def summary(vaults, pots):
         # Column headers
         header_row = ["Pot Names", "Pot Values"]
 
-        # Pot data
-        pot_rows = []
-        for j in pots:
-            if pots[j].vault == vault:
-                pot_rows.append([pots[j].pot_name, f"${pots[j].amount}"])
-
         # Combine into one table
         full_table = [title_row, header_row] + pot_rows
 
         # Print the whole thing as one table
-        print(tabulate(full_table, tablefmt="simple_grid"),end="\n\n")
+        print(tabulate(full_table, tablefmt="heavy_grid"),end="\n\n")
 
 
 def transaction_summary(transactions): 
@@ -449,7 +527,7 @@ def re_transactions(pots, vaults, pot_ids, user):
     db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
-    # Create pots and transaction_id variables
+    # Create transaction_id variables
     transactions = {}
     transaction_ids = []
     # Searcb the pots database for all information for defined pot_ids
@@ -466,7 +544,7 @@ def re_transactions(pots, vaults, pot_ids, user):
                 amount = int(transaction[6])
                 pot = pots[f"pot_{transaction[3]}"] # Dictionary key format is "Pot_1: Object"
                 vault = vaults[f"vault_{transaction[4]}"] # Dictionary key format is "Vault_1: Object"
-                # Create pot instance
+                # Create transaction instance
                 transaction = Transaction(transaction_id=transaction_id, transaction_name=transaction_name, date=date, pot=pot, vault=vault, type=type, amount=amount, user=user)
                 # Add instance to transactions object dictionary
                 transactions[f"transaction_{transaction.transaction_id}"] = transaction
@@ -519,3 +597,158 @@ def count_forecasts():
     returned_forecasts = res.fetchall()
     # Calculate Length of returned forecasts
     return len(returned_forecasts)
+
+def del_profile(user):
+    try:
+        # Establish a connection to the Database
+        db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+        con = sqlite3.connect(db_path)
+        cur = con.cursor()
+
+        # Get the username before deleting
+        username = user.username
+
+        # Delete all related data first
+        cur.execute("DELETE FROM transactions WHERE username = ?", (username,))
+        cur.execute("DELETE FROM pots WHERE username = ?", (username,))
+        cur.execute("DELETE FROM vaults WHERE username = ?", (username,))
+
+        # Finally, delete the user
+        cur.execute("DELETE FROM users WHERE username = ?", (username,))
+
+        con.commit()
+        con.close()
+        print_slow("\nProfile deleted successfully.")
+
+    except sqlite3.Error as e:
+        print_slow(f"\nError deleting profile: {e}")
+
+def del_vault(user, vaults):
+    # Establish a connection to the Database
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+
+    vault_name = input("\nEnter the name of the Vault you want to delete: \n\n").strip()
+    username = user.username  # Get the current user's username
+
+    # Search for the vault that matches both the name and the username
+    selected_vault = None
+    for vault in vaults.values():
+        if vault.vault_name == vault_name and vault.username == username:
+            selected_vault = vault
+            break
+
+    if selected_vault:
+        vault_id = selected_vault.vault_id
+        # Proceed with deletion of related data first
+        cur.execute("DELETE FROM transactions WHERE vault_id = ?", (vault_id,))
+        cur.execute("DELETE FROM pots WHERE vault_id = ?", (vault_id,))
+
+        # Finally delete the vault
+        cur.execute("DELETE FROM vaults WHERE vault_id = ?", (vault_id,))
+        con.commit()
+        con.close()
+
+        return True
+
+    else:
+        print_slow(f"\nVault '{vault_name}' not found for user '{username}'.")
+        print_slow_nospace(f"Available vaults for {username}: {[v.vault_name for v in vaults.values() if v.username == username]}\n")
+        return False
+
+def del_pot(user, pots):
+    # Establish a connection to the database
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+
+
+    pot_name = input("\nEnter the name of the Pot you want to delete: \n\n").strip()
+    username = user.username  # Get the current user's username
+
+    # Search for the pot that matches both the name and the username
+    selected_pot = None
+    for pot in pots.values():
+        if pot.pot_name == pot_name and pot.username == username:
+            selected_pot = pot
+            break
+
+    if selected_pot:
+        pot_id = selected_pot.pot_id
+        # Proceed with deletion of related data first
+        cur.execute("DELETE FROM transactions WHERE pot_id = ?", (pot_id,))
+
+        # Finally delete the pot
+        cur.execute("DELETE FROM pots WHERE pot_id = ?", (pot_id,))
+        con.commit()
+        con.close()
+
+
+        print_slow("\nPot deleted succesfully")
+        return True
+
+    else:
+        print_slow(f"\nPot '{pot_name}' not found for user '{username}'.")
+        print_slow_nospace(f"Available pots for {username}: {[p.pot_name for p in pots.values() if p.username == username]}")
+        return False
+
+def del_transaction(user, transactions):
+    # Establish a connection to the database
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    
+    
+    transaction_id = int(input("\nEnter the transaction_id that you want to delete: \n\n").strip())
+    username = user.username  # Get the current user's username
+
+    # Search for the transaction that matches both the id and the username
+    selected_transaction = None
+    for transaction in transactions.values():
+        if transaction.transaction_id == transaction_id and transaction.username == username:
+            selected_transaction = transaction
+            break
+
+    if selected_transaction:
+        
+        # Delete the transaction
+        cur.execute("DELETE FROM transactions WHERE transaction_id = ?", (transaction_id,))
+        con.commit()
+        con.close()
+
+        print_slow("\nTransaction deleted succesfully")
+
+        return True
+
+    else:
+        print_slow(f"\nTransaction '{transaction_id}' not found for user '{username}'.")
+        print_slow_nospace(f"Available transactions for {username}: {[t.transaction_id for t in transactions.values() if t.username == username]}")
+        return False
+    
+
+def del_forecast(user,forecasts,forecast_id):
+    # Establish a connection to the database
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    
+    username = user.username  # Get the current user's username
+
+    # Search for the transaction that matches both the id and the username
+    selected_forecast = None
+    for forecast in forecasts.values():
+        if forecast.forecast_id == forecast_id and forecast.username == username:
+            selected_forecast = forecast
+            break
+
+    if selected_forecast:
+        
+        # Delete the forecast
+        cur.execute("DELETE FROM forecasts WHERE forecast_id = ?", (forecast_id,))
+        con.commit()
+        con.close()
+        return True
+
+    else:
+        return False
