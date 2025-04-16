@@ -41,7 +41,47 @@ SQLite tables:
 - project_functions.py - Helper functions and CRUD operations
 - database.py - Database initialization and schema
 
-## Installation
+## Dependencies
+
+The project requires:
+- Python 3.6+
+- [Tabulate](https://pypi.org/project/tabulate/) (for formatted output)
+
+All dependencies are listed in [requirements.txt](requirements.txt)
+
+## Installation & Setup
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/yourusername/money-pots.git
+   cd money-pots
+
+2. **Set-up Virtual Environment**:
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate    # Windows
+
+3. **Install dependencies**:
+pip install -r requirements.txt
+
+4. **Run the application**:
+python3 project.py
+
+## Development Journey
+
+### Key Achievements
+- Implemented complex class relationships
+- Developed complete SQLite integration
+- Created robust CLI interface
+- Designed forecast conversion system
+
+### Future Roadmap
+- Enhanced data analytics (Graphs, more tabular information)
+- Project implimented as an API, deployed and hosted as AWS Lambda function
+- PostgreSQL migration 
+- Project implemented as a Web app, also deployed and hosted on AWS. 
+
+
 
 
 
