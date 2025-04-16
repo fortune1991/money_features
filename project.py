@@ -8,15 +8,12 @@ from database import create_database
 import warnings
 warnings.filterwarnings("ignore", message="The default datetime adapter is deprecated", category=DeprecationWarning)
 
-
 def main():
     vaults = {}
     pots = {}
     transactions = {}
     forecasts = {}
     
-    # check if database exists
-
     database_exists = os.path.isfile("/Users/michaelfortune/Developer/projects/money/money_features/money.db")
     
     if not database_exists:
@@ -31,19 +28,19 @@ Welcome to Money Pots, your savings and budgeting calculator.""")
         username = user.username
     
     if database_exists:
-
         #log user in
         while True:
             # Establish a connection to the Database
             db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
             con = sqlite3.connect(db_path)
             cur = con.cursor()
+
             print_slow("""
 Welcome to Money Pots, your savings and budgeting calculator. Let me help you to login and view your profile. What's your username?""")
             login = input().strip() # Remove trailing white space
             user_exists = False
 
-            # SQL QUERY TO DETERMINE IF USER EXISTS
+            # SQL query to determine if user exists
 
             res = cur.execute("SELECT username FROM users")
             returned_users = res.fetchall()
@@ -51,14 +48,14 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 if login == user[0]:
                     user_exists = True
             
-           # REINSTANTIATE OBJECTS FROM DATABASE
+           # if user exists, reinstantiate objects from the database
                         
             if user_exists == True:
                 print()
                 print_slow("Welcome back to Money Pots")
                 #reinstantiate user
                 user = create_user(login)
-                username = user.username  # Get the current user's username
+                username = user.username 
                 #reinstantiate vaults 
                 vaults, vault_ids = re_vaults(login, user)
                 #reinstantiate pots
@@ -84,7 +81,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 else:
                     forecasts, forecast_ids = re_forecasts(pots, vaults, pot_ids, user)
 
-                # Query forecasts to see if any of these are now in the past. Store in updated variable
+                # Query forecasts to see if any of these are now in the past. Store in past_forecasts variable
                 today = datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S')
                 
                 res = cur.execute("SELECT * FROM forecasts WHERE date < ?", (today,))
@@ -92,7 +89,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 len_past_forecasts = len(past_forecasts)
 
                 if len_past_forecasts > 0:
-                    # Print message to state updated are required
                     print_slow("\nYou have forecasted expenditure, which now needs to be confirmed. Please see below:")
                     
                     # Submit these forecasts as transactions
@@ -124,6 +120,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             forecast_exists = False
                             res = cur.execute("SELECT * FROM forecasts")
                             returned_forecasts = res.fetchall()
+
                             if len(returned_forecasts) > 0:
                                 forecast_exists = True
 
@@ -135,7 +132,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                                 forecasts, forecast_ids = re_forecasts(pots, vaults, pot_ids, user)
 
                             break
-
                         else:
                             continue
 
@@ -147,11 +143,9 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 for vault in vaults.values():
                     vault.vault_value()
 
-                #con.close()
                 break
 
             else:
-                #con.close()
                 print_slow("\nUser doesn't exist. Respond 'Try again' 'New user' or 'Exit'")    
                 response = input()
 
@@ -166,10 +160,9 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 else:
                     print_slow_nospace("\nUnknown Command. Please try to login again")                
      
-# Loop on Command line until exit
+# Loop Menu on Command line until exit
 
     # Establish DB Connection
-    
     db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
@@ -181,6 +174,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
             while True:
                 print_slow('\nWhat type of new item would you like to create? \n\n\033[1;31mNew Items Menu\033[0m \n\n"Profile" to create a new user profile, \n"Vault" to create a new vault, \n"Pot" to create a new pot, \n"Transaction" to submit a new transaction, \n"Forecast" to submit an estimate for predicted spending, \n"Exit" to return back to main menu')
                 new_action = input()
+
                 if new_action == "Profile":
                     print_slow("\nExcellent. Please answer the following questions to create a new user profile")
                     transactions= {}
@@ -231,7 +225,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                                     selected_vault = vault
 
                             if selected_vault:
-
                                 pots[f"pot_{(pot_count + 1)}"] = create_pot(pot_count, selected_vault, user)
 
                                 pot_data = [(pots[f"pot_{(pot_count + 1)}"].pot_id, 
@@ -261,7 +254,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
                 elif new_action == "Transaction":
                     print_slow("\nExcellent. Now, let me help you create a new transaction.")
-
                     while True:
                         try:
                             while True: 
@@ -303,11 +295,9 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                         expense = input()
 
                         if expense == "Single expense":
-
                             # Collect forecast name
                             print_slow("\nPlease provide a name reference for this Forecast: ")
                             forecast_name = input()
-
                             while True:
                                 single = int(input("\nWhat's the amount of your predicted expenditure? \n\n"))
                                 if single > 0:
@@ -344,7 +334,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                                 while True: 
                                     # Count existing transactions
                                     start_forecast = count_forecasts()
-                                    
                                     print_slow("\nWhat pot should this pot be assigned to?: ")
                                     pot_input = input()
 
@@ -473,10 +462,8 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 if summary_action == "Current Balance Report":
                     #reinstantiate vaults 
                     vaults, vault_ids = re_vaults(username, user)
-                    
                     #reinstantiate pots
                     pots, pot_ids = re_pots(vaults, vault_ids, user)
-
                     #reinstantiate transactions 
                     transaction_exists = False
                     res = cur.execute("SELECT * FROM transactions")
@@ -498,10 +485,8 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 if summary_action == "Forecast Balance Report":
                     #reinstantiate vaults 
                     vaults, vault_ids = re_vaults(username, user)
-                    
                     #reinstantiate pots
                     pots, pot_ids = re_pots(vaults, vault_ids, user)
-
                     #reinstantiate transactions 
                     transaction_exists = False
                     res = cur.execute("SELECT * FROM transactions")
@@ -672,10 +657,8 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     if success:
                         #reinstantiate vaults 
                         vaults, vault_ids = re_vaults(username, user)
-                        
                         #reinstantiate pots
                         pots, pot_ids = re_pots(vaults, vault_ids, user)
-
                         #reinstantiate transactions 
                         transaction_exists = False
                         res = cur.execute("SELECT * FROM transactions")
@@ -703,10 +686,8 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     if success:
                         #reinstantiate vaults 
                         vaults, vault_ids = re_vaults(username, user)
-                        
                         #reinstantiate pots
                         pots, pot_ids = re_pots(vaults, vault_ids, user)
-
                         #reinstantiate transactions 
                         transaction_exists = False
                         res = cur.execute("SELECT * FROM transactions")
@@ -733,10 +714,8 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     if success:
                         #reinstantiate vaults 
                         vaults, vault_ids = re_vaults(username, user)
-
                         #reinstantiate pots
                         pots, pot_ids = re_pots(vaults, vault_ids, user)
-
                         #reinstantiate transactions 
                         transaction_exists = False
                         res = cur.execute("SELECT * FROM transactions")
@@ -806,21 +785,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
         else:
             print_slow("\nInvalid command. Please try again")
-
-# Add feature within infinite loop for "Forecasting". This should allow users to submit prospective transactions 
-# in two different formats. "single expense" and "weekly expense". After each expense is submitted, the programme
-# should output a pretty print table to show the model results of budget vs expenditure. If previsouly submitted transactions
-# are now present (or past), then the programme should ask the user to update and then approve the forecasts. These will be updated
-# in the SQL database as transactions.
-
-
-# Write Forecasting Function. Add functions for delete, new, summary etc. 
-# Make sure pot dates sit within the boundaries of the vault date
-# Make sure transaction and forecast dates sit within the boundaries of the pot date
-# Tidy up comments to make code more readable
-# Write code tests
-# Use programme for a while
-# Type up blog posts
 
 if __name__ == "__main__":
     main()

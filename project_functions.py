@@ -7,7 +7,6 @@ import warnings
 warnings.filterwarnings("ignore", message="The default datetime adapter is deprecated", category=DeprecationWarning)
 
 def submit_forecast(forecast_name, x, pot, vault, user, date, amount, forecast_type):
-    # Collect forecast id
     forecast_id = x + 1
 
     #Input all information into the Class
@@ -20,7 +19,7 @@ def submit_forecast(forecast_name, x, pot, vault, user, date, amount, forecast_t
         db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
         con = sqlite3.connect(db_path)
         cur = con.cursor()
-        # save transaction to database
+        # Save transaction to database
         cur.executemany("INSERT INTO forecasts VALUES(?, ?, ?, ?, ?, ?, ?, ?)", forecast_data)
         con.commit()
         con.close()
@@ -30,12 +29,11 @@ def submit_forecast(forecast_name, x, pot, vault, user, date, amount, forecast_t
     return forecast
 
 def submit_transaction(x, pot, vault, user):
-    # Collect transaction name
     print_slow("\nPlease provide a name reference for this transaction: ")
     transaction_name = input()
-    # Collect transaction id
+
     transaction_id = x + 1
-    # Collect date data and create date object
+
     today = datetime.datetime.today()
 
     print_slow("\nExcellent. Now we'll define when the transaction took place. Please note, all date input values must be in the format DD/MM/YY")
@@ -81,7 +79,7 @@ def submit_transaction(x, pot, vault, user):
         db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
         con = sqlite3.connect(db_path)
         cur = con.cursor()
-        # save transaction to database
+        # Save transaction to database
         cur.executemany("INSERT INTO transactions VALUES(?, ?, ?, ?, ?, ?, ?, ?)", transaction_data)
         con.commit()
         con.close()
@@ -91,9 +89,7 @@ def submit_transaction(x, pot, vault, user):
     return transaction
 
 def transfer_transaction(x, pot, vault, user, transaction_name, date, transaction_type, amount):
-    # Collect transaction id
     transaction_id = x
-
     # Collect transaction amount
     print_slow(f"\nForecasted transaction amount was ${amount}. Is this correct? (Y/N)")
     while True:
@@ -122,7 +118,7 @@ def transfer_transaction(x, pot, vault, user, transaction_name, date, transactio
         db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
         con = sqlite3.connect(db_path)
         cur = con.cursor()
-        # save transaction to database
+        # Save transaction to database
         cur.executemany("INSERT INTO transactions VALUES(?, ?, ?, ?, ?, ?, ?, ?)", transaction_data)
         con.commit()
         con.close()
@@ -134,14 +130,14 @@ def transfer_transaction(x, pot, vault, user, transaction_name, date, transactio
 def print_slow(txt):
     for x in txt: 
         print(x, end='', flush=True)
-        sleep(0) #0.025 at end of programme
+        sleep(0) #0.025 for slow text
     print()
     print()
 
 def print_slow_nospace(txt):
     for x in txt: 
         print(x, end='', flush=True)
-        sleep(0) #0.025 at end of programme
+        sleep(0) #0.025 for slow text
     print()
 
 def int_validator():
@@ -157,13 +153,10 @@ def int_validator():
 def collect_date(message):
     while True:
         try:
-            # Print prompt and get input
-            print_slow(message)  # Temporarily replace print_slow for testing
-            date_input = input().strip()  # .strip() removes extra whitespace
-            
-            # Try parsing the date
+            print_slow(message) 
+            date_input = input().strip()
             date = datetime.datetime.strptime(date_input, "%d/%m/%y")
-            return date  # Exit on success
+            return date 
             
         except ValueError as err:
             print_slow_nospace(f"\nInvalid date: {err}. Please use DD/MM/YY format\n")
@@ -184,7 +177,6 @@ def forecast_balance_vault(selected_vault, pots, smallest_date, delta_weeks):
     for week_num, date in enumerate(date_list, start=1):
         # Start with current vault value (base + transactions)
         vault_total = selected_vault.vault_value()
-        
         # Add only future forecasts for each pot
         for pot in pots.values():
             if pot.vault_id == selected_vault.vault_id:
@@ -201,7 +193,6 @@ def forecast_balance_pot(selected_pot, pots, smallest_date, delta_weeks):
     for week_num, date in enumerate(date_list, start=1):
         # Start with current vault value (base + transactions)
         pot_total = selected_pot.pot_value()
-        
         # Add only future forecasts for each pot
         for pot in pots.values():
             if pot.pot_id == selected_pot.pot_id:
@@ -224,21 +215,15 @@ def summary(vaults, pots):
 
         vault_value = vault.vault_value()
 
-        # First row: Vault info, second column left blank
         title_row = [f"Vault Name: {vault.vault_name}", f"Vault Value: ${vault_value}"]
-
-        # Column headers
         header_row = ["Pot Names", "Pot Values"]
-
         # Combine into one table
         full_table = [title_row, header_row] + pot_rows
 
-        # Print the whole thing as one table
         print(tabulate(full_table, tablefmt="heavy_grid"),end="\n\n")
 
 
 def transaction_summary(transactions): 
-
     table = []
     for i in transactions:
         row = [transactions[i].transaction_id, transactions[i].transaction_name,transactions[i].date,transactions[i].amount]
@@ -247,7 +232,6 @@ def transaction_summary(transactions):
     print(f"\n{tabulate(table, headers=["transaction_id","transaction_name", "date", "amount"], tablefmt="heavy_grid")}\n")
     
 def forecast_summary(forecasts): 
-
     table = []
     for forecast in forecasts.values():
         row = [forecast.forecast_id, forecast.forecast_name, forecast.date, forecast.amount]
@@ -266,12 +250,11 @@ def create_user(*args):
     return user
 
 def create_pot(x, vault, user):
-    # Collect pot name
     print_slow("\nWhat is your preferred name for the pot?: ")
     pot_name = input()
-    # Collect pot id
+    
     pot_id = x + 1
-    # Collect pot amount
+    
     print_slow("\nWhat is the amount of money in the pot?: ")
     while True:
         amount = int_validator()
@@ -279,6 +262,7 @@ def create_pot(x, vault, user):
             break
         else:
             print_slow("\namount must be greater than 0") 
+
     #Input all information into the Class
     pot = Pot(pot_id=pot_id, pot_name=pot_name, vault=vault, amount=amount, user=user)
     if pot:
@@ -288,11 +272,11 @@ def create_pot(x, vault, user):
     return pot
 
 def create_vault(x, user):
-    # Collect vault name
     print_slow("\nWhat is your preferred name for the vault?: ")
     vault_name = input()
-    # Collect vault id
+    
     vault_id = x + 1
+    
     #Input all information into the Class
     vault = Vault(vault_id=vault_id, vault_name=vault_name, user=user)
     
@@ -353,8 +337,7 @@ def create_profile():
                         pots[f"pot_{(x+1)+start_pot}"] = create_pot((x+start_pot), selected_vault, user)
                         break
                     else:
-                        print_slow(f"Vault '{vault_input}' not found. Please enter a valid vault name.")
-                        
+                        print_slow(f"Vault '{vault_input}' not found. Please enter a valid vault name.")        
             break
         
         except ValueError as e:  
@@ -460,7 +443,7 @@ def re_pots(vaults, vault_ids, user):
             pot_id = int(pot[0])
             pot_name = pot[1]
             amount = int(pot[3])
-            vault = vaults[f"vault_{pot[2]}"] # Dictionary key format is "Vault_1: Object"
+            vault = vaults[f"vault_{pot[2]}"] 
             # Create pot instance
             pot = Pot(pot_id=pot_id, pot_name=pot_name, vault=vault, amount=amount, user=user)
             # Add instance to pots object dictionary
@@ -491,8 +474,8 @@ def re_forecasts(pots, vaults, pot_ids, user):
                 date = convert_date(forecast[2])
                 type = (forecast[5])
                 amount = int(forecast[6])
-                pot = pots[f"pot_{forecast[3]}"] # Dictionary key format is "Pot_1: Object"
-                vault = vaults[f"vault_{forecast[4]}"] # Dictionary key format is "Vault_1: Object"
+                pot = pots[f"pot_{forecast[3]}"] 
+                vault = vaults[f"vault_{forecast[4]}"] 
                 # Create forecast instance
                 forecast = Forecast(forecast_id=forecast_id, forecast_name=forecast_name, date=date, pot=pot, vault=vault, type=type, amount=amount, user=user)
                 # Add instance to transactions object dictionary
@@ -540,44 +523,76 @@ def count_pots():
     db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
-    # Search the database
-    res = cur.execute("SELECT * FROM pots")
-    returned_pots = res.fetchall()
-    # Calculate Length of returned pots
-    return len(returned_pots)
+    
+    res = cur.execute("""
+        SELECT pot_id 
+        FROM pots 
+        ORDER BY pot_id DESC 
+        LIMIT 1;
+    """)
+    
+    highest_pot = res.fetchone() 
+    
+    con.close()
+    
+    return highest_pot[0] if highest_pot else None
         
 def count_vaults():
     # Establish Database Connection
     db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
-    # Search the database
-    res = cur.execute("SELECT * FROM vaults")
-    returned_vaults = res.fetchall()
-    # Calculate Length of returned pots
-    return len(returned_vaults)
+    
+    res = cur.execute("""
+        SELECT vault_id
+        FROM vaults
+        ORDER BY vault_id DESC
+        LIMIT 1;             
+    """)
+    
+    highest_vault = res.fetchone() 
+    
+    con.close()
+    
+    return highest_vault[0] if highest_vault else None
         
 def count_transactions():
     # Establish Database Connection
     db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
-    # Search the database
-    res = cur.execute("SELECT * FROM transactions")
-    returned_transactions = res.fetchall()
-    # Calculate Length of returned transactions
-    return len(returned_transactions)
+    
+    res = cur.execute("""
+        SELECT transaction_id 
+        FROM transactions
+        ORDER BY transaction_id DESC 
+        LIMIT 1;
+    """)
+    
+    highest_transaction = res.fetchone()  
+    
+    con.close()
+    
+    return highest_transaction[0] if highest_transaction else None
 
 def count_forecasts():
     # Establish Database Connection
     db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
-    # Search the database
-    res = cur.execute("SELECT * FROM forecasts")
-    returned_forecasts = res.fetchall()
-    # Calculate Length of returned forecasts
-    return len(returned_forecasts)
+    
+    res = cur.execute("""
+        SELECT forecast_id 
+        FROM forecasts 
+        ORDER BY forecast_id DESC 
+        LIMIT 1;
+    """)
+    
+    highest_forecast = res.fetchone()  # Use fetchone() since we only expect one result
+    
+    con.close()
+    
+    return highest_forecast[0] if highest_forecast else None
 
 def del_profile(user):
     try:
@@ -665,7 +680,6 @@ def del_pot(user, pots):
         con.commit()
         con.close()
 
-
         print_slow("\nPot deleted succesfully")
         return True
 
@@ -679,7 +693,6 @@ def del_transaction(user, transactions):
     db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
-    
     
     transaction_id = int(input("\nEnter the transaction_id that you want to delete: \n\n").strip())
     username = user.username  # Get the current user's username

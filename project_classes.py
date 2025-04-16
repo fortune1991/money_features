@@ -25,15 +25,15 @@ class Vault:
         if not isinstance(vault_id, int):
             raise ValueError("ID must be an integer value!")
         
-        if not isinstance(user, User):  # Validate that user is a User object
+        if not isinstance(user, User): 
             raise ValueError("user must be an instance of the User class!")
 
         # Assign to self object
         self.vault_id = vault_id
         self.vault_name = vault_name
-        self.user = user # Composition used instead of inheritence: Vault has a User object instance
-        self.username = user.username # variable to store username as a string (not the object instance)
-        self.pots = []  # List to store associated Pot instances
+        self.user = user 
+        self.username = user.username 
+        self.pots = []  
 
     def __str__(self):
         return f"Vault(vault_id={self.vault_id}, vault_name={self.vault_name}, username={self.username})"
@@ -83,19 +83,19 @@ class Pot:
         if not isinstance(pot_id, int):
             raise ValueError("Pot ID must be an integer value!")
         
-        if not isinstance(vault, Vault):  # Validate that vault is a Vault object
+        if not isinstance(vault, Vault): 
             raise ValueError("vault must be an instance of the Vault class!")
         
          # Assign unique Pot attributes
         self.pot_id = pot_id
         self.pot_name = pot_name
-        self.vault = vault  # Composition used instead of inheritence: Pot has a Vault object instance
-        self.vault_id = vault.vault_id # vault_id as string
+        self.vault = vault  
+        self.vault_id = vault.vault_id 
         self.amount = amount
-        self.transactions = [] # List to store associated transactions
+        self.transactions = [] 
         self.forecasts = [] 
-        self.user = user # Composition used instead of inheritence: Vault has a User object instance
-        self.username = user.username # variable to store username as a string (not the object instance)
+        self.user = user 
+        self.username = user.username 
 
         # Add this Pot to the Vault's list of pots
         vault.add_pot(self)
@@ -155,7 +155,7 @@ class Transaction:
         if not isinstance(date, datetime.date):
             raise ValueError("Must be a valid date object!")
         
-        if not isinstance(pot, Pot):  # Validate that pot is a Pot object
+        if not isinstance(pot, Pot): 
             raise ValueError("pot must be an instance of the Pot class!")
         
         if type not in ["in", "out"]:
@@ -165,14 +165,14 @@ class Transaction:
         self.transaction_id = transaction_id
         self.transaction_name = transaction_name
         self.date = date
-        self.pot = pot  # Composition used instead of inheritence: Transaction has a Pot object instance
-        self.pot_id = pot.pot_id # String of pot_id
-        self.vault = vault  # Composition used instead of inheritence: Transaction has a Pot object instance
-        self.vault_id = vault.vault_id # String of pot_id
+        self.pot = pot  
+        self.pot_id = pot.pot_id 
+        self.vault = vault  
+        self.vault_id = vault.vault_id 
         self.type = type
         self.amount = amount
-        self.user = user # Composition used instead of inheritence: Vault has a User object instance
-        self.username = user.username # variable to store username as a string (not the object instance)
+        self.user = user 
+        self.username = user.username 
         
         # Add this transaction to the pots list of transactions
         pot.add_transaction(self)
@@ -205,14 +205,14 @@ class Forecast:
         self.forecast_id = forecast_id
         self.forecast_name = forecast_name
         self.date = date
-        self.pot = pot  # Composition used instead of inheritence: Transaction has a Pot object instance
-        self.pot_id = pot.pot_id # String of pot_id
-        self.vault = vault  # Composition used instead of inheritence: Transaction has a Pot object instance
-        self.vault_id = vault.vault_id # String of pot_id
+        self.pot = pot  
+        self.pot_id = pot.pot_id 
+        self.vault = vault  
+        self.vault_id = vault.vault_id 
         self.type = type
         self.amount = amount
-        self.user = user # Composition used instead of inheritence: Vault has a User object instance
-        self.username = user.username # variable to store username as a string (not the object instance)
+        self.user = user 
+        self.username = user.username 
         
         # Add this forecast to the pots list of forecasts
         pot.add_forecast(self)
