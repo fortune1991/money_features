@@ -57,15 +57,18 @@ All dependencies are listed in [requirements.txt](requirements.txt)
    cd money-pots
 
 2. **Set-up Virtual Environment**:
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate    # Windows
+    ```bash
+    python -m venv venv
+    source venv/bin/activate # Linux/Mac
+    venv\Scripts\activate # Windows
 
 3. **Install dependencies**:
-pip install -r requirements.txt
+    ```bash
+    pip install -r requirements.txt
 
 4. **Run the application**:
-python3 project.py
+    ```bash
+    python3 project.py
 
 ## Development Journey
 
@@ -76,12 +79,7 @@ python3 project.py
 - Designed forecast conversion system
 
 ### Future Roadmap
-- Enhanced data analytics (Graphs, more tabular information)
+- Enhanced data analytics (grafana, more tabular information etc.)
 - Project implimented as an API, deployed and hosted as AWS Lambda function
 - PostgreSQL migration 
 - Project implemented as a Web app, also deployed and hosted on AWS. 
-
-
-
-
-
