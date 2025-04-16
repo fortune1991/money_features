@@ -53,7 +53,7 @@ All dependencies are listed in [requirements.txt](requirements.txt)
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/money-pots.git
+   git clone https://github.com/fortune1991/money_features.git
    cd money-pots
 
 2. **Set-up Virtual Environment**:
@@ -71,7 +71,6 @@ All dependencies are listed in [requirements.txt](requirements.txt)
     python3 project.py
 
 ## Development Journey
-
 ### Key Achievements
 - Implemented complex class relationships
 - Developed complete SQLite integration
