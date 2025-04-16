@@ -1,39 +1,47 @@
 # Money Pots  
 
-## Video Demo:  
-<https://www.youtube.com/watch?v=9nUeLk2rJWc&ab_channel=MichaelFortune>  
+## Description  
+Money Pots is a comprehensive savings and budgeting tool that helps users organize their finances through a hierarchical system of Vaults and Pots.
 
-## Description:  
-Money Pots is a budgeting calculator designed for travelers. It allows users to divide their savings into "Vaults" and "Pots" to better manage their funds. A detailed explanation of its functionality is provided upon execution.  
+## Key Features  
 
-The program's user interface (UI) is inspired by text-based adventure games, prompting users to input data through a series of interactive questions.  
+### Financial Organization  
+- Create unlimited Vaults and Pots, to compartmentalize funds
+- Track current balances across all accounts  
+- View transaction histories  
+- Manage future financial forecasts  
 
-## OOP and Design Principles  
-One of the key goals of this project was to gain a deeper understanding of Object-Oriented Programming (OOP). The core elements—**User, Pot, Vault, and Transactions**—are implemented as class objects. These classes include instance and class methods that calculate updated values for Vaults and Pots.  
+### Advanced Functionality  
+- Automatic conversion of past-due forecasts into transactions 
+- Weekly balance projections  
+- Comprehensive summary reports  
+- Data persistence through SQLite database  
 
-A key feature of the program is that users can create as many Vaults or Pots as they like. The **step-by-step instantiation** of these objects ensures they are linked correctly based on user input. **Error handling** was also carefully considered as part of the approach.  
+## Technical Implementation  
 
-At this stage, the primary development focus was ensuring that these objects interact within the expected hierarchy. As the program evolved, I also identified opportunities to consolidate reusable code into functions, improving the clarity and efficiency of the `main()` function.  
+### Object-Oriented Architecture  
+Core classes:  
+- **`User`**: Manages user profiles  
+- **`Vault`**: Contains Pots and calculates aggregate values  
+- **`Pot`**: Tracks individual budgets  
+- **`Transaction`**: Records financial activities  
+- **`Forecast`**: Manages future transactions  
 
-## Code Structure  
-The codebase is organized into three main files:  
+### Database Schema  
+SQLite tables:  
+- `users`  
+- `vaults`  
+- `pots`  
+- `transactions`  
+- `forecasts`  
 
-- **`project.py`** – Contains the main function along with three additional user-defined functions, as required by CS50.  
-- **`project_classes.py`** – Houses all class definitions and associated methods.  
-- **`project_functions.py`** – Includes supplementary user-defined methods. This separation enhances code maintainability.  
+## Code Structure 
+- project.py - Main application logic and menu system
+- project_classes.py - All class definitions and methods
+- project_functions.py - Helper functions and CRUD operations
+- database.py - Database initialization and schema
 
-## Future Development  
-Currently, the program is implemented in its simplest form, primarily modeling interactions between transactions, pots, and vaults. Some additional data, such as transaction dates, is collected but not yet integrated into the logic.  
-
-The next phase of development aims to expand its functionality into **budget forecasting and financial modeling**. To achieve this, a database will be introduced—initially using **CSV files** and later transitioning to **SQL**.  
-
-The UI will also evolve in multiple stages:  
-
-1. Converting the text-based interface into a **CLI tool** using Typer.  
-2. Developing a **web application** for broader accessibility.  
-3. Creating a **mobile app** for on-the-go budget management.  
-
-Through these iterations, I hope to explore different disciplines in computer science and continue my learning journey beyond CS50.  
+## Installation
 
 
 
