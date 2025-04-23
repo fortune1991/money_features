@@ -146,7 +146,7 @@ def int_validator():
             value = int(input())
             break
         except ValueError:
-            print_slow("Invalid input. Please enter a valid integer: ")
+            print_slow("\nInvalid input. Please enter a valid integer: ")
         
     return value
 
@@ -240,6 +240,11 @@ def forecast_summary(forecasts):
     print(f"\n{tabulate(table, headers=["forecast_id","forecast_name", "date", "amount"], tablefmt="heavy_grid")}\n")
 
 def create_user(*args):
+    # Establish a connection to the Database
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+
     if args:
         username = args[0]
         user = User(username)
@@ -247,9 +252,19 @@ def create_user(*args):
         print_slow("Now firstly, what is your name?: ")
         username = input()
         user = User(username)
+
+    cur.execute("INSERT INTO users VALUES(?)", (user.username,))
+    con.commit()
+    con.close()
+
     return user
 
 def create_pot(x, vault, user):
+    # Establish a connection to the Database
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+
     print_slow("\nWhat is your preferred name for the pot?: ")
     pot_name = input()
     
@@ -267,40 +282,57 @@ def create_pot(x, vault, user):
     pot = Pot(pot_id=pot_id, pot_name=pot_name, vault=vault, amount=amount, user=user)
     if pot:
         print_slow("\nThanks, your pot has been created succesfully")
+        # save pot to database
+        pots_data = []
+        pots_data.append((pot.pot_id, pot.pot_name, pot.vault_id, pot.amount, pot.username))
+        cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?)", pots_data)
+        con.commit()
+        con.close()
+
     else:
         print_slow("\nERROR: pot not created succesfully")
     return pot
 
 def create_vault(x, user):
+    # Establish a connection to the Database
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+
     print_slow("\nWhat is your preferred name for the vault?: ")
     vault_name = input()
     
     vault_id = x + 1
+    username = user.username
     
     #Input all information into the Class
     vault = Vault(vault_id=vault_id, vault_name=vault_name, user=user)
     
     if vault:
         print_slow("\nThanks, your vault has been created succesfully")
+        # save vault to database
+        vaults_data = []
+        vaults_data.append((vault.vault_id, vault.vault_name, username))
+        cur.executemany("INSERT INTO vaults VALUES(?, ?, ?)", vaults_data)
+        con.commit()
+        con.close()
+
     else:
         print_slow("ERROR: vault not created succesfully")
     
     return vault
 
 def create_profile():
-    # Establish a connection to the Database
-    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
-
     # Create a User object
     user = create_user()
     # Count number of existing vaults in database. if not exist = 0
-    res = cur.execute("SELECT vault_id FROM vaults")
-    start_vault = len(res.fetchall())
+    start_vault = count_vaults()
+    if start_vault == None:
+        start_vault = 0
     # Count number of existing pots in database. if not exist = 0
-    res = cur.execute("SELECT pot_id FROM pots")
-    start_pot = len(res.fetchall())
+    start_pot = count_pots()
+    if start_pot == None:
+        start_pot = 0
     # Create a Vault object with valid data
     print_slow(f"\nHi {user.username}, let me help you create some vaults. How many do you want to create?: ")
     no_vaults = int_validator()
@@ -349,27 +381,6 @@ def create_profile():
     # Summary of the vaults and pots values
     print_slow("See below list of vaults and their summed values")
     summary(vaults, pots)
-    # Insert user data into the database
-    users_data = [
-    (user.username,),
-    ]
-    cur.executemany("INSERT INTO users VALUES(?)", users_data)
-    # Insert vaults data into the database
-    vaults_data = []
-    for vault in vaults.values():
-        vaults_data.append((vault.vault_id, vault.vault_name, vault.username))
-
-    cur.executemany("INSERT INTO vaults VALUES(?, ?, ?)", vaults_data)
-    # Insert pots data into the database
-    pots_data = []
-    for pot in pots.values():
-        pots_data.append((pot.pot_id, pot.pot_name, pot.vault_id, pot.amount, pot.username))
-
-    cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?)", pots_data)
-    
-    # Close the database connections
-    con.commit()
-    con.close()
 
     return user, vaults, pots
 
@@ -398,6 +409,23 @@ The data collected is stored in an SQL database. The user can log back in when t
 is re-executed to start where they left off. 
 
 We hope you enjoy using Money Pots!"""
+
+def re_user(name):
+
+    # Establish Database Connection
+    db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db" 
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    # Searcb the users database for all information for defined user 
+    res = cur.execute("SELECT * FROM users WHERE username = ?", (name,))
+    returned_user = res.fetchall()
+    # Create variable
+    username = returned_user[0]
+    # Create user instance
+    user = User(username=username)
+
+    con.close()
+    return user
 
 def re_vaults(name, user):
 

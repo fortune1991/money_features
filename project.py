@@ -1,6 +1,6 @@
 import datetime, os, sqlite3, math
 from project_classes import User, Vault, Pot, Transaction
-from project_functions import submit_forecast, transfer_transaction, submit_transaction, print_slow, print_slow_nospace, int_validator, collect_date, convert_date, summary, create_pot, create_user, create_vault, create_profile, instructions, re_vaults, re_pots, re_transactions, re_forecasts, count_pots, count_transactions, count_vaults, count_forecasts, transaction_summary, forecast_summary, del_profile, del_vault, del_pot, del_transaction, del_forecast, forecast_balance_vault, forecast_balance_pot
+from project_functions import submit_forecast, transfer_transaction, submit_transaction, print_slow, print_slow_nospace, int_validator, collect_date, convert_date, summary, create_pot, create_user, create_vault, create_profile, instructions, re_user, re_vaults, re_pots, re_transactions, re_forecasts, count_pots, count_transactions, count_vaults, count_forecasts, transaction_summary, forecast_summary, del_profile, del_vault, del_pot, del_transaction, del_forecast, forecast_balance_vault, forecast_balance_pot
 from tabulate import tabulate
 from time import sleep
 from database import create_database
@@ -54,7 +54,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 print()
                 print_slow("Welcome back to Money Pots")
                 #reinstantiate user
-                user = create_user(login)
+                user = re_user(login)
                 username = user.username 
                 #reinstantiate vaults 
                 vaults, vault_ids = re_vaults(login, user)
@@ -185,13 +185,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 elif new_action == "Vault":
                     vault_count = count_vaults()
                     vaults[f"vault_{(vault_count + 1)}"] = create_vault(vault_count, user)
-                    vault_data = [(vaults[f"vault_{(vault_count + 1)}"].vault_id,
-                    vaults[f"vault_{(vault_count + 1)}"].vault_name,
-                    vaults[f"vault_{(vault_count + 1)}"].username)]
-
-                    # Insert vaults data into the database
-                    cur.executemany("INSERT INTO vaults VALUES(?, ?, ?)", vault_data)
-                    con.commit()
                     
                     # Create associated pots
                     print_slow_nospace("Now, let's create at least one pot to associate with this vault")
@@ -199,16 +192,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     selected_vault = vaults.get(f"vault_{(vault_count + 1)}")
 
                     pots[f"pot_{(pot_count + 1)}"] = create_pot(pot_count, selected_vault, user)
-
-                    pot_data = [(pots[f"pot_{(pot_count + 1)}"].pot_id, 
-                    pots[f"pot_{(pot_count + 1)}"].pot_name, 
-                    pots[f"pot_{(pot_count + 1)}"].vault_id, 
-                    pots[f"pot_{(pot_count + 1)}"].amount, 
-                    pots[f"pot_{(pot_count + 1)}"].username)]
-
-                    # Insert pots data into the database
-                    cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?)", pot_data)
-                    con.commit()
 
                     action = ""
                     break
@@ -227,15 +210,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             if selected_vault:
                                 pots[f"pot_{(pot_count + 1)}"] = create_pot(pot_count, selected_vault, user)
 
-                                pot_data = [(pots[f"pot_{(pot_count + 1)}"].pot_id, 
-                                pots[f"pot_{(pot_count + 1)}"].pot_name, 
-                                pots[f"pot_{(pot_count + 1)}"].vault_id, 
-                                pots[f"pot_{(pot_count + 1)}"].amount, 
-                                pots[f"pot_{(pot_count + 1)}"].username)]
-
-                                # Insert pots data into the database
-                                cur.executemany("INSERT INTO pots VALUES(?, ?, ?, ?, ?)", pot_data)
-                                con.commit()
                                 break
 
                             else:
@@ -259,6 +233,8 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             while True: 
                                 # Count existing transactions
                                 start_transaction = count_transactions()
+                                if start_transaction == None:
+                                    start_transaction = 0
                                 
                                 print_slow("What pot should this pot be assigned to?: ")
                                 pot_input = input()
@@ -332,8 +308,10 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
                             try:
                                 while True: 
-                                    # Count existing transactions
+                                    # Count existing forecasts
                                     start_forecast = count_forecasts()
+                                    if start_forecast == None:
+                                        start_forecast = 0
                                     print_slow("\nWhat pot should this pot be assigned to?: ")
                                     pot_input = input()
 
@@ -406,7 +384,8 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             try:
                                 while True: 
                                     start_forecast = count_forecasts()
-                                    
+                                    if start_forecast == None:
+                                        start_forecast = 0
                                     print_slow("\nWhat pot should this pot be assigned to?: ")
                                     pot_input = input()
 
@@ -530,7 +509,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             
                             #Find 'smallest' date
                             print_slow("\nWhat date would you like to start the forecast from?")
-                            smallest_date = collect_date("Date of transaction: ")
+                            smallest_date = collect_date("Date: ")
                             
                             #Find 'biggest' date
                             try: 
@@ -653,7 +632,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
                 elif delete_action == "Vault":
                     success = del_vault(user,vaults) #Delete vault
-
                     if success:
                         #reinstantiate vaults 
                         vaults, vault_ids = re_vaults(username, user)
@@ -669,7 +647,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                         if transaction_exists == False:
                             transactions = {}
                             transaction_ids = []
-
                         else:
                             transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user)
 
@@ -682,7 +659,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
                 elif delete_action == "Pot":
                     success = del_pot(user,pots)
-
                     if success:
                         #reinstantiate vaults 
                         vaults, vault_ids = re_vaults(username, user)
@@ -709,7 +685,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
                 elif delete_action == "Transaction":
                     success = del_transaction(user,transactions)
-                    username = user.username  # Get the current user's username
 
                     if success:
                         #reinstantiate vaults 
