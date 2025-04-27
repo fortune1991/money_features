@@ -1,4 +1,4 @@
-import datetime,os,sqlite3
+import datetime,os,sqlite3,math
 from project_classes import User,Vault,Pot,Transaction,Forecast
 from tabulate import tabulate
 from time import sleep
@@ -144,7 +144,41 @@ def convert_date(string):
         print_slow(err)
     return date
 
-def forecast_balance_vault(selected_vault,pots,smallest_date,delta_weeks):
+def forecast_balance_vault(con,vaults,pots,username):
+    cur = con.cursor()
+    print_slow("\nWhat is the name of the Vault you would like to forecast?")
+    name = input()
+    selected_vault = None
+    for vault in vaults.values():
+        if vault.vault_name == name and vault.username[0] == username:
+            selected_vault = vault
+    
+    #Get list of forecasts linked to this vault                            
+    res = cur.execute("SELECT * FROM forecasts WHERE vault_id = ?",(selected_vault.vault_id,))
+    vault_forecasts = res.fetchall()
+    
+    #Find 'smallest' date
+    print_slow("\nWhat date would you like to start the forecast from?")
+    smallest_date = collect_date("Date: ")
+    
+    #Find 'biggest' date
+    try: 
+        biggest_date = vault_forecasts[0][2]
+    except IndexError as e:  
+        print_slow(f"\nError: {e}")
+        return print_slow_nospace("No forecasts recorded for this Vault")
+
+    for forecast in vault_forecasts:
+        if forecast[2] > biggest_date:
+            biggest_date = forecast[2]
+        else:
+            continue
+    biggest_date = convert_date(biggest_date)
+
+    delta = biggest_date - smallest_date
+    delta_days = delta.days
+    delta_weeks = math.ceil(delta_days / 7)
+
     date_list = [smallest_date + datetime.timedelta(days=7*i) for i in range(delta_weeks + 1)]
     table_rows = []
     for week_num,date in enumerate(date_list,start=1):
@@ -155,6 +189,8 @@ def forecast_balance_vault(selected_vault,pots,smallest_date,delta_weeks):
             if pot.vault_id == selected_vault.vault_id:
                 vault_total += pot.pot_forecast_value(date)
         table_rows.append((week_num,date,vault_total))
+        
+    cur.close()
     return print(f"\n{tabulate(table_rows,headers=["Week No.","Date","Balance"],tablefmt="heavy_grid")}\n")
 
 def forecast_balance_pot(selected_pot,pots,smallest_date,delta_weeks):

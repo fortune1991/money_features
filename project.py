@@ -338,41 +338,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                         option = input()
 
                         if option == "Vault":
-                            print_slow("\nWhat is the name of the Vault you would like to forecast?")
-                            name = input()
-                            selected_vault = None
-                            for vault in vaults.values():
-                                if vault.vault_name == name and vault.username == user.username:
-                                    selected_vault = vault
-                            
-                            #Get list of forecasts linked to this vault                            
-                            res = cur.execute("SELECT * FROM forecasts WHERE vault_id = ?",(selected_vault.vault_id,))
-                            vault_forecasts = res.fetchall()
-                            
-                            #Find 'smallest' date
-                            print_slow("\nWhat date would you like to start the forecast from?")
-                            smallest_date = collect_date("Date: ")
-                            
-                            #Find 'biggest' date
-                            try: 
-                                biggest_date = vault_forecasts[0][2]
-                            except IndexError as e:  
-                                print_slow(f"\nError: {e}")
-                                print_slow_nospace("No forecasts recorded for this Vault")
-                                break
-
-                            for forecast in vault_forecasts:
-                                if forecast[2] > biggest_date:
-                                    biggest_date = forecast[2]
-                                else:
-                                    continue
-                            biggest_date = convert_date(biggest_date)
-
-                            delta = biggest_date - smallest_date
-                            delta_days = delta.days
-                            delta_weeks = math.ceil(delta_days / 7)
-                            
-                            forecast_balance_vault(selected_vault,pots,smallest_date,delta_weeks)
+                            forecast_balance_vault(con,vaults,pots,username)
                             break
 
                         elif option == "Pot":
@@ -413,7 +379,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             forecast_balance_pot(selected_pot,pots,smallest_date,delta_weeks)
                             break
                         else:
-                            print_slow("\nOption not recognized, please try again.")
+                            print_slow_nospace("\nOption not recognized, please try again.")
                             continue
 
                     break
@@ -437,7 +403,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     break
 
                 else:
-                    print_slow("Sorry, I don't recognize that instruction. Please try again.")
+                    print_slow_nospace("Sorry, I don't recognize that instruction. Please try again.")
 
             continue
 
