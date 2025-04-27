@@ -77,6 +77,3 @@ def create_database():
     # Commit and close the connection 
     con.commit()
     con.close()
-
-    
-    
