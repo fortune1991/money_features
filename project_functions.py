@@ -193,7 +193,37 @@ def forecast_balance_vault(con,vaults,pots,username):
     cur.close()
     return print(f"\n{tabulate(table_rows,headers=["Week No.","Date","Balance"],tablefmt="heavy_grid")}\n")
 
-def forecast_balance_pot(selected_pot,pots,smallest_date,delta_weeks):
+def forecast_balance_pot(con,pots,username):
+    cur = con.cursor()
+    print_slow("\nWhat is the name of the Pot you would like to forecast?")
+    name = input()
+    selected_pot = None
+    for pot in pots.values():
+        if pot.pot_name == name and pot.username[0] == username:
+            selected_pot = pot
+    #Get list of forecasts linked to this pot                           
+    res = cur.execute("SELECT * FROM forecasts WHERE pot_id = ?",(selected_pot.pot_id,))
+    pot_forecasts = res.fetchall()
+    #Find 'smallest' date
+    print_slow("\nWhat date would you like to start the forecast from?")
+    smallest_date = collect_date("Date: ")
+    #Find 'biggest' date
+    try: 
+        biggest_date = pot_forecasts[0][2]
+    except IndexError as e:  
+        print_slow(f"\nError: {e}")
+        return print_slow("No forecasts recorded for this Vault")
+    
+    for forecast in pot_forecasts:
+        if forecast[2] > biggest_date:
+            biggest_date = forecast[2]
+        else:
+            continue
+
+    biggest_date = convert_date(biggest_date)
+    delta = biggest_date - smallest_date
+    delta_days = delta.days
+    delta_weeks = math.ceil(delta_days / 7)
     date_list = [smallest_date + datetime.timedelta(days=7*i) for i in range(delta_weeks + 1)]
     table_rows = []
     for week_num,date in enumerate(date_list,start=1):
@@ -204,6 +234,7 @@ def forecast_balance_pot(selected_pot,pots,smallest_date,delta_weeks):
             if pot.pot_id == selected_pot.pot_id:
                 pot_total += pot.pot_forecast_value(date)
         table_rows.append((week_num,date,pot_total))
+    cur.close()
     return print(f"\n{tabulate(table_rows,headers=["Week No.","Date","Balance"],tablefmt="heavy_grid")}\n")
         
 def summary(vaults,pots):

@@ -342,41 +342,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                             break
 
                         elif option == "Pot":
-                            print_slow("\nWhat is the name of the Pot you would like to forecast?")
-                            name = input()
-                            selected_pot = None
-                            for pot in pots.values():
-                                if pot.pot_name == name and pot.username == user.username:
-                                    selected_pot = pot
-                            
-                            #Get list of forecasts linked to this pot                           
-                            res = cur.execute("SELECT * FROM forecasts WHERE pot_id = ?",(selected_pot.pot_id,))
-                            pot_forecasts = res.fetchall()
-                            
-                            #Find 'smallest' date
-                            print_slow("\nWhat date would you like to start the forecast from?")
-                            smallest_date = collect_date("Date: ")
-                            
-                            #Find 'biggest' date
-                            try: 
-                                biggest_date = pot_forecasts[0][2]
-                            except IndexError as e:  
-                                print_slow(f"\nError: {e}")
-                                print_slow("No forecasts recorded for this Vault")
-                                break
-                            
-                            for forecast in pot_forecasts:
-                                if forecast[2] > biggest_date:
-                                    biggest_date = forecast[2]
-                                else:
-                                    continue
-                            biggest_date = convert_date(biggest_date)
-
-                            delta = biggest_date - smallest_date
-                            delta_days = delta.days
-                            delta_weeks = math.ceil(delta_days / 7)
-                            
-                            forecast_balance_pot(selected_pot,pots,smallest_date,delta_weeks)
+                            forecast_balance_pot(con,pots,username)
                             break
                         else:
                             print_slow_nospace("\nOption not recognized, please try again.")
