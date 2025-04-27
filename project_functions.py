@@ -171,6 +171,7 @@ def forecast_balance_pot(selected_pot,pots,smallest_date,delta_weeks):
     return print(f"\n{tabulate(table_rows,headers=["Week No.","Date","Balance"],tablefmt="heavy_grid")}\n")
         
 def summary(vaults,pots):
+    print()
     for i in vaults:
         vault = vaults[i]
         # Pot data
@@ -647,23 +648,17 @@ def user_exist(con,login):
 def refresh_user_data(con,user,username):
     cur = con.cursor()
     #reinstantiate vaults
-    vaults, vault_ids = re_vaults(username, user)
+    vaults,vault_ids = re_vaults(con,username,user)
     #reinstantiate pots
-    pots, pot_ids = re_pots(vaults, vault_ids, user)
+    pots,pot_ids = re_pots(con,vaults,vault_ids,user)
     #reinstantiate transactions
     res = cur.execute("SELECT * FROM transactions")
     transaction_exists = bool(res.fetchall())
-    transactions, transaction_ids = re_transactions(pots, vaults, pot_ids, user) if transaction_exists else ({}, [])
+    transactions, transaction_ids = re_transactions(con,pots,vaults,pot_ids,user) if transaction_exists else ({}, [])
     #reinstantiate forecasts
-    forecast_exists = False
     res = cur.execute("SELECT * FROM forecasts")
-    returned_forecasts = res.fetchall()
-    if len(returned_forecasts) > 0:
-        forecast_exists = True
-    if forecast_exists == False:
-        pass
-    else:
-        forecasts,forecast_ids = re_forecasts(con,pots,vaults,pot_ids,user)
+    forecast_exists = bool(res.fetchall())
+    forecasts,forecast_ids = re_forecasts(con,pots,vaults,pot_ids,user) if forecast_exists else ({}, [])
     # Query forecasts to see if any of these are now in the past. Store in past_forecasts variable
     today = datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S')
     res = cur.execute("SELECT * FROM forecasts WHERE date < ?",(today,))
