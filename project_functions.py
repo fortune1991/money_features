@@ -6,27 +6,117 @@ from time import sleep
 import warnings
 warnings.filterwarnings("ignore",message="The default datetime adapter is deprecated",category=DeprecationWarning)
 
-def submit_forecast(con,forecast_name,x,pot,vault,user,username,date,amount,forecast_type):
-    forecast_id = x + 1
-    #Input all information into the Class
-    forecast = Forecast(forecast_id=forecast_id,forecast_name=forecast_name,date=date,pot=pot,vault=vault,type=forecast_type,amount=amount,user=user)
-    forecast_data = [(forecast_id,forecast_name,date,pot.pot_id,vault.vault_id,forecast_type,amount,username)]
-    if forecast:
-        print_slow_nospace("\nThanks, your forecast has been created succesfully")
-        # Save transaction to database
-        cur = con.cursor()
-        cur.executemany("INSERT INTO forecasts VALUES(?,?,?,?,?,?,?,?)",forecast_data)
-        con.commit()
-        cur.close()
+def submit_forecast(con,x,pots,vaults,user,username):
+    #error handler
+    if x == None:
+        x = 1
+    # Collect forecast name
+    print_slow("\nPlease provide a name reference for this Forecast: ")
+    forecast_name = input()
+    # Collect forecast type
+    while True:
+        types = ["Single expense","Weekly expense","Exit"]
+        print_slow('\nPlease define the forecast type. "Single expense", "Weekly expense" or type "Exit" to terminate the program')
+        forecast_type = input()
+        if forecast_type not in types:
+            print_slow("\nincorrect forecast reference")
+        elif forecast_type == "Exit":
+            return exit()
+        elif forecast_type == "Single expense":
+            no_weeks = 1
+            break
+        elif "Weekly expense":
+            no_weeks = int(input("\nHow many weeks is this for? "))
+            break
+        else:
+            continue
+    # Collect forecast amount
+    print_slow("\nWhat is the forecast amount?: ")
+    while True:
+        amount = int_validator()
+        if amount > 0:
+            break
+        else:
+            print_slow("\namount must be greater than 0")
+    # Collect forecast type
+    while True:
+        types = ["in","out"]
+        print_slow('\nPlease define the type of forecast. "in" or "out": ')
+        forecast_type = input()
+        if forecast_type not in types:
+            print_slow("\nincorrect forecast reference")
+        else:
+            break
+    if forecast_type == "out":
+        amount = amount * -1
     else:
-        print_slow("ERROR: forecast not created succesfully")
-    return forecast
+        pass
+    # Dates
+    print_slow("\nExcellent. Now we'll define when the forecast will take place. Please note, all date input values must be in the format DD/MM/YY")     
+    while True:
+        expense_date = collect_date("Date Forecast will start: ")
+        today = datetime.datetime.today()
+        date_list = {}
+        if expense_date < today:
+            print_slow("\nInvalid Date, must be in the future for a forecast")
+        else:
+            for i in range (1,no_weeks+1,1):
+                date = expense_date + datetime.timedelta(days=(7*i))
+                date_list[i] = date
+            break
 
-def submit_transaction(con,x,pot,vault,user,username):
+    try:
+        # Find the pot using a simple loop
+        print_slow("\nWhat pot should this Forecast be assigned to?: ")
+        pot_input = input()
+        selected_pot = None
+        selected_vault = None
+        for pot in pots.values():
+            if pot.pot_name == pot_input and pot.username == username: 
+                selected_pot = pot
+                selected_vault = vaults.get(f"vault_{pot.vault_id}")
+                break
+        forecast_updates = []
+        if selected_pot:
+            for key,date in date_list.items():
+                forecast_id = x + key
+                #Input all information into the Class
+                forecast = Forecast(forecast_id=forecast_id,forecast_name=forecast_name,date=date,pot=selected_pot,vault=selected_vault,type=forecast_type,amount=amount,user=user)
+                forecast_data = [(forecast_id,forecast_name,date,selected_pot.pot_id,selected_vault.vault_id,forecast_type,amount,username)]
+                if forecast:
+                    # Save transaction to database
+                    cur = con.cursor()
+                    cur.executemany("INSERT INTO forecasts VALUES(?,?,?,?,?,?,?,?)",forecast_data)
+                    con.commit()
+                    cur.close()
+                else:
+                    return print_slow_nospace("ERROR: forecast not created succesfully")
+                forecast_updates.append(forecast)
+
+            print_slow_nospace("\nThanks, your forecast has been created succesfully")
+            selected_pot.pot_value()    
+            return forecast_updates, no_weeks
+                
+        else:
+            print_slow(f"pot '{pot_input}' not found. Please enter a valid pot name.")
+    
+    except ValueError as e:  
+        return print_slow_nospace(f"Error: {e}")
+    except Exception as e:  
+        return print_slow_nospace(f"An unexpected error occurred: {e}")
+    
+def submit_transaction(con,x,pots,vaults,user,username):
+    print_slow_nospace("\nExcellent. Now, let me help you create a new transaction.")
     print_slow("\nPlease provide a name reference for this transaction: ")
     transaction_name = input()
     transaction_id = x + 1
     today = datetime.datetime.today()
+    # Count existing transactions
+    start_transaction = x + 1
+    if start_transaction == None:
+        start_transaction = 1
+    print_slow("\nWhat pot should this pot be assigned to?: ")
+    pot_input = input()
     print_slow("\nExcellent. Now we'll define when the transaction took place. Please note, all date input values must be in the format DD/MM/YY")
     while True:
         date = collect_date("Date of transaction: ")
@@ -56,19 +146,37 @@ def submit_transaction(con,x,pot,vault,user,username):
         amount = amount * -1
     else:
         pass
-    #Input all information into the Class
-    transaction = Transaction(transaction_id=transaction_id,transaction_name=transaction_name,date=date,pot=pot,vault=vault,type=transaction_type,amount=amount,user=user)
-    transaction_data = [(transaction_id,transaction_name,date,pot.pot_id,vault.vault_id,transaction_type,amount,username)]
-    if transaction:
-        print_slow_nospace("\nThanks, your transaction has been created succesfully")
-        # Save transaction to database
-        cur = con.cursor()
-        cur.executemany("INSERT INTO transactions VALUES(?,?,?,?,?,?,?,?)",transaction_data)
-        con.commit()
-        cur.close()
+
+    # Find the pot using a simple loop
+    selected_pot = None
+    selected_vault = None
+    for pot in pots.values():
+        if pot.pot_name == pot_input and pot.username == username: 
+            selected_pot = pot
+            selected_vault = vaults.get(f"vault_{pot.vault_id}")
+            break
+
+    if selected_pot:
+        try:
+            #Input all information into the Class
+            transaction = Transaction(transaction_id=start_transaction,transaction_name=transaction_name,date=date,pot=selected_pot,vault=selected_vault,type=transaction_type,amount=amount,user=user)
+            transaction_data = [(start_transaction,transaction_name,date,selected_pot.pot_id,selected_vault.vault_id,transaction_type,amount,username)]
+            if transaction:
+                print_slow_nospace("\nThanks, your transaction has been created succesfully")
+                # Save transaction to database
+                cur = con.cursor()
+                cur.executemany("INSERT INTO transactions VALUES(?,?,?,?,?,?,?,?)",transaction_data)
+                con.commit()
+                cur.close()
+            return transaction
+
+        except ValueError as e:
+            print_slow(f"Error: {e}")
+            
+        except Exception as e:  
+            print_slow(f"An unexpected error occurred: {e}")
     else:
-        print_slow("ERROR: transaction not created succesfully")
-    return transaction
+        print_slow(f"pot '{pot_input}' not found. Please enter a valid pot name.")
 
 def transfer_transaction(con,x,pot,vault,user,transaction_name,date,transaction_type,amount):
     transaction_id = x
@@ -150,7 +258,7 @@ def forecast_balance_vault(con,vaults,pots,username):
     name = input()
     selected_vault = None
     for vault in vaults.values():
-        if vault.vault_name == name and vault.username[0] == username:
+        if vault.vault_name == name and vault.username == username:
             selected_vault = vault
     
     #Get list of forecasts linked to this vault                            
@@ -199,7 +307,7 @@ def forecast_balance_pot(con,pots,username):
     name = input()
     selected_pot = None
     for pot in pots.values():
-        if pot.pot_name == name and pot.username[0] == username:
+        if pot.pot_name == name and pot.username == username:
             selected_pot = pot
     #Get list of forecasts linked to this pot                           
     res = cur.execute("SELECT * FROM forecasts WHERE pot_id = ?",(selected_pot.pot_id,))
@@ -253,7 +361,7 @@ def summary(vaults,pots):
         header_row = ["Pot Names","Pot Values"]
         # Combine into one table
         full_table = [title_row,header_row] + pot_rows
-        print(tabulate(full_table,tablefmt="heavy_grid"),end="\n\n")
+        print(tabulate(full_table,tablefmt="heavy_grid"),end="\n")
 
 def transaction_summary(transactions): 
     table = []
@@ -274,45 +382,63 @@ def forecast_summary(forecasts):
 def create_user(con,*args):
     cur = con.cursor()
     if args:
-        username = args[0]
+        username = args[0] if isinstance(args[0], str) else str(args[0])
         user = User(username)
     else:
         print_slow("Now firstly, what is your name?: ")
         username = input()
         user = User(username)
 
-    cur.execute("INSERT INTO users VALUES(?)",(user.username,))
+    cur.execute("INSERT INTO users VALUES(?)",(username,))
     con.commit()
     cur.close()
     return user
 
-def create_pot(con,x,vault,user,username):
-    cur = con.cursor()
-    print_slow("\nWhat is your preferred name for the pot?: ")
-    pot_name = input()
-    pot_id = x + 1
-    print_slow("\nWhat is the amount of money in the pot?: ")
-    while True:
-        amount = int_validator()
-        if amount > 0:
-            break
-        else:
-            print_slow("\namount must be greater than 0") 
+def create_pot(con,x,vaults,user,username):
+    print_slow("\nWhat vault will this pot be assigned to? ")
+    pot_vault = input()
+    selected_vault = None
+    for vault in vaults.values():
+        if vault.vault_name == pot_vault and vault.username == username:
+            selected_vault = vault
+    if selected_vault:
+        cur = con.cursor()
+        print_slow("\nWhat is your preferred name for the pot?: ")
+        pot_name = input()
+        pot_id = x + 1
+        print_slow("\nWhat is the amount of money in the pot?: ")
+        while True:
+            amount = int_validator()
+            if amount > 0:
+                break
+            else:
+                print_slow("\namount must be greater than 0") 
 
-    #Input all information into the Class
-    pot = Pot(pot_id=pot_id,pot_name=pot_name,vault=vault,amount=amount,user=user)
-    if pot:
-        print_slow("\nThanks, your pot has been created succesfully")
-        # save pot to database
-        pots_data = []
-        pots_data.append((pot.pot_id,pot.pot_name,pot.vault_id,pot.amount,username))
-        cur.executemany("INSERT INTO pots VALUES(?,?,?,?,?)",pots_data)
-        con.commit()
-        con.close()
+        #Input all information into the Class
+        try:
+            pot = Pot(pot_id=pot_id,pot_name=pot_name,vault=selected_vault,amount=amount,user=user)
+            if pot:
+                print_slow_nospace("\nThanks, your pot has been created succesfully")
+                # save pot to database
+                pots_data = []
+                pots_data.append((pot.pot_id,pot.pot_name,pot.vault_id,pot.amount,username))
+                cur.executemany("INSERT INTO pots VALUES(?,?,?,?,?)",pots_data)
+                con.commit()
+                cur.close()
+            else:
+                print_slow("\nERROR: pot not created succesfully")
+            
+            return pot
+        
+        except ValueError as e:  
+            return print_slow(f"Error: {e}, Please try again")
+            
+        except Exception as e:  
+            return print_slow(f"An unexpected error occurred: {e}, Please try again")
+
     else:
-        print_slow("\nERROR: pot not created succesfully")
-    return pot
-
+        return print_slow_nospace(f"\nVault '{pot_vault}' not found. Please enter a valid vault name.")
+        
 def create_vault(con,x,user,username):
     cur = con.cursor()
     print_slow("\nWhat is your preferred name for the vault?: ")
@@ -335,22 +461,22 @@ def create_vault(con,x,user,username):
 def create_profile(con):
     # Create a User object
     user = create_user(con)
+    username = user.username
     # Count number of existing vaults in database. if not exist = 0
-    start_vault = count_vaults()
+    start_vault = count_vaults(con)
     if start_vault == None:
         start_vault = 0
     # Count number of existing pots in database. if not exist = 0
-    start_pot = count_pots()
+    start_pot = count_pots(con)
     if start_pot == None:
         start_pot = 0
     # Create a Vault object with valid data
-    print_slow(f"\nHi {user.username}, let me help you create some vaults. How many do you want to create?: ")
+    print_slow(f"\nHi {username}, let me help you create some vaults. How many do you want to create?: ")
     no_vaults = int_validator()
     vaults = {}
-    
     try:
         for x in range(no_vaults):
-            vaults["vault_{0}".format((x+1)+start_vault)] = create_vault((x+start_vault),user)
+            vaults["vault_{0}".format(start_vault+x)] = create_vault(con,(start_vault+x),user,username)
     except ValueError as e:  
         print_slow(f"\nError: {e}")
     except Exception as e:  
@@ -360,37 +486,24 @@ def create_profile(con):
     print_slow("Now, let me help you create some pots. How many do you want to create?: ")
     no_pots = int_validator()
     pots = {}
-    
-    while True:
-        try:
-            for x in range(no_pots):
-                while True: 
-                    print_slow("\nWhat vault should this pot be assigned to?: ")
-                    vault_input = input()
-                    # Find the vault using a simple loop
-                    selected_vault = None
-                    for vault in vaults.values():
-                        if vault.vault_name == vault_input and vault.username == user.username:
-                            selected_vault = vault
-                            break
-                    if selected_vault:
-                        pots[f"pot_{(x+1)+start_pot}"] = create_pot((x+start_pot),selected_vault,user)
-                        break
-                    else:
-                        print_slow(f"Vault '{vault_input}' not found. Please enter a valid vault name.")        
-            break
-        
-        except ValueError as e:  
-            print_slow(f"Error: {e}")
+    try:
+        for x in range(no_pots):
+            create_pot(con,(x+start_pot),vaults,user,username)
+                            
+    except ValueError as e:  
+        print_slow(f"Error: {e}")
 
-        except Exception as e:  
-            print_slow(f"An unexpected error occurred: {e}")
+    except Exception as e:  
+        print_slow(f"An unexpected error occurred: {e}")
 
+    #refresh user data
+    vaults, vault_ids,pots,pot_ids,transactions,transaction_ids,forecasts,forecast_ids = refresh_user_data(con,user,username)
+    #refresh pot/vault values
+    pots,vaults = refresh_pot_vault_values(pots,vaults)
     # Summary of the vaults and pots values
     print_slow("See below list of vaults and their summed values")
     summary(vaults,pots)
-
-    return user,vaults,pots
+    return user,vaults, vault_ids,pots,pot_ids,transactions,transaction_ids,forecasts,forecast_ids
 
 def instructions():
     return """In this program, your savings are organized into two categories: vaults and pots.
@@ -418,15 +531,17 @@ is re-executed to start where they left off.
 
 We hope you enjoy using Money Pots!"""
 
-def re_user(con,name):
+def re_user(con, name):
     cur = con.cursor()
-    # Searcb the users database for all information for defined user 
-    res = cur.execute("SELECT * FROM users WHERE username = ?",(name,))
+    # Search the users database for all information for the defined user
+    res = cur.execute("SELECT * FROM users WHERE username = ?", (name,))
     returned_user = res.fetchall()
-    # Create variable
-    username = returned_user[0]
-    # Create user instance
-    user = User(username=username)
+    if returned_user:
+        username = returned_user[0][0]  
+        user = User(username=username)
+    else:
+        print(f"User {name} not found.")
+        user = None
     cur.close()
     return user
 
@@ -436,7 +551,7 @@ def re_vaults(con,name,user):
     vaults = {}
     vault_ids = []
     # Searcb the vaults database for all information for defined user 
-    res = cur.execute("SELECT * FROM vaults WHERE username = ?",(name,))
+    res = cur.execute("SELECT * FROM vaults WHERE username = ?", (str(name),))
     returned_vaults = res.fetchall()
     for vault in returned_vaults:
         # Create variables
@@ -541,7 +656,7 @@ def count_pots(con):
     """)
     highest_pot = res.fetchone() 
     cur.close()
-    return highest_pot[0] if highest_pot else None
+    return highest_pot[0] if highest_pot else 0
         
 def count_vaults(con):
     cur = con.cursor()
@@ -553,7 +668,7 @@ def count_vaults(con):
     """)
     highest_vault = res.fetchone() 
     cur.close()
-    return highest_vault[0] if highest_vault else None
+    return highest_vault[0] if highest_vault else 0
         
 def count_transactions(con):
     cur = con.cursor()
@@ -565,7 +680,7 @@ def count_transactions(con):
     """)
     highest_transaction = res.fetchone()  
     cur.close()
-    return highest_transaction[0] if highest_transaction else None
+    return highest_transaction[0] if highest_transaction else 0
 
 def count_forecasts(con):
     cur = con.cursor()
@@ -578,11 +693,7 @@ def count_forecasts(con):
     
     highest_forecast = res.fetchone()  # Use fetchone() since we only expect one result
     cur.close()
-    return highest_forecast[0] if highest_forecast else None
-    
-    highest_forecast = res.fetchone()  # Use fetchone() since we only expect one result
-    cur.close()
-    return highest_forecast[0] if highest_forecast else None
+    return highest_forecast[0] if highest_forecast else 0
 
 def del_profile(con,user,username):
     try:
@@ -605,7 +716,7 @@ def del_vault(con,user,vaults,username):
     # Search for the vault that matches both the name and the username
     selected_vault = None
     for vault in vaults.values():
-        if vault.vault_name == vault_name and vault.username[0] == username:
+        if vault.vault_name == vault_name and vault.username == username:
             selected_vault = vault
             break
 
@@ -624,7 +735,7 @@ def del_vault(con,user,vaults,username):
 
     else:
         print_slow(f"\nVault '{vault_name}' not found for user '{username}'.")
-        print_slow_nospace(f"Available vaults for {username}: {[v.vault_name for v in vaults.values() if v.username[0] == username]}\n")
+        print_slow_nospace(f"Available vaults for {username}: {[v.vault_name for v in vaults.values() if v.username == username]}\n")
         return False
 
 def del_pot(con,user,pots,username):
@@ -632,7 +743,7 @@ def del_pot(con,user,pots,username):
     # Search for the pot that matches both the name and the username
     selected_pot = None
     for pot in pots.values():
-        if pot.pot_name == pot_name and pot.username[0] == username:
+        if pot.pot_name == pot_name and pot.username == username:
             selected_pot = pot
             break
 
@@ -650,7 +761,7 @@ def del_pot(con,user,pots,username):
 
     else:
         print_slow(f"\nPot '{pot_name}' not found for user '{username}'.")
-        print_slow_nospace(f"Available pots for {username}: {[p.pot_name for p in pots.values() if p.username[0] == username]}")
+        print_slow_nospace(f"Available pots for {username}: {[p.pot_name for p in pots.values() if p.username == username]}")
         return False
 
 def del_transaction(con,user,transactions,username):
@@ -662,7 +773,7 @@ def del_transaction(con,user,transactions,username):
     # Search for the transaction that matches both the id and the username
     selected_transaction = None
     for transaction in transactions.values():
-        if transaction.transaction_id == transaction_id and transaction.username[0] == username:
+        if transaction.transaction_id == transaction_id and transaction.username == username:
             selected_transaction = transaction
             break
     if selected_transaction:
@@ -675,7 +786,7 @@ def del_transaction(con,user,transactions,username):
         return True
     else:
         print_slow(f"\nTransaction '{transaction_id}' not found for user '{username}'.")
-        print_slow_nospace(f"Available transactions for {username}: {[t.transaction_id for t in transactions.values() if t.username[0] == username]}")
+        print_slow_nospace(f"Available transactions for {username}: {[t.transaction_id for t in transactions.values() if t.username == username]}")
         return False
 
 def del_forecast(con,user,forecasts,forecast_id,username):
@@ -683,7 +794,7 @@ def del_forecast(con,user,forecasts,forecast_id,username):
     # Search for the transaction that matches both the id and the username
     selected_forecast = None
     for forecast in forecasts.values():
-        if forecast.forecast_id == forecast_id and forecast.username[0] == username:
+        if forecast.forecast_id == forecast_id and forecast.username == username:
             selected_forecast = forecast
             break
     if selected_forecast:
@@ -695,11 +806,10 @@ def del_forecast(con,user,forecasts,forecast_id,username):
         return True
     else:
         print_slow(f"\nForecast '{forecast_id}' not found for user '{username}'.")
-        print_slow_nospace(f"Available transactions for {username}: {[t.transaction_id for t in transactions.values() if t.username[0] == username]}")
+        print_slow_nospace(f"Available transactions for {username}: {[t.transaction_id for t in transactions.values() if t.username == username]}")
         return False
 
 def user_exist(con,login):
-    user_exists = False
     # SQL query to determine if user exists
     cur = con.cursor()
     res = cur.execute("SELECT username FROM users")
@@ -707,10 +817,8 @@ def user_exist(con,login):
     cur.close()
     for user in returned_users:
         if login == user[0]:
-            user_exists = True
-            return user_exists
-        else:
-            return user_exists
+            return True  
+    return False  
 
 def refresh_user_data(con,user,username):
     cur = con.cursor()
@@ -742,7 +850,7 @@ def refresh_user_data(con,user,username):
             selected_pot = None
             selected_vault = None
             for pot in pots.values():
-                if pot.pot_id == forecast[3] and pot.username == user.username: 
+                if pot.pot_id == forecast[3] and pot.username == username: 
                     selected_pot = pot
                     selected_vault = vaults.get(f"vault_{pot.vault_id}")
                     break
@@ -769,6 +877,12 @@ def refresh_user_data(con,user,username):
                 break
             else:
                 continue
-
     cur.close()
     return vaults, vault_ids,pots,pot_ids,transactions,transaction_ids,forecasts,forecast_ids
+
+def refresh_pot_vault_values(pots,vaults):
+    for pot in pots.values():
+        pot.pot_value()
+        for vault in vaults.values():
+            vault.vault_value()
+    return pots,vaults

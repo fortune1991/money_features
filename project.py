@@ -1,6 +1,6 @@
 import datetime,os,sqlite3,math
 from project_classes import User,Vault,Pot,Transaction
-from project_functions import submit_forecast,transfer_transaction,submit_transaction,print_slow,print_slow_nospace,int_validator,collect_date,convert_date,summary,create_pot,create_user,create_vault,create_profile,instructions,re_user,re_vaults,re_pots,re_transactions,re_forecasts,count_pots,count_transactions,count_vaults,count_forecasts,transaction_summary,forecast_summary,del_profile,del_vault,del_pot,del_transaction,del_forecast,forecast_balance_vault,forecast_balance_pot,user_exist,refresh_user_data
+from project_functions import submit_forecast,transfer_transaction,submit_transaction,print_slow,print_slow_nospace,int_validator,collect_date,convert_date,summary,create_pot,create_user,create_vault,create_profile,instructions,re_user,re_vaults,re_pots,re_transactions,re_forecasts,count_pots,count_transactions,count_vaults,count_forecasts,transaction_summary,forecast_summary,del_profile,del_vault,del_pot,del_transaction,del_forecast,forecast_balance_vault,forecast_balance_pot,user_exist,refresh_user_data, refresh_pot_vault_values
 from tabulate import tabulate
 from time import sleep
 from database import create_database
@@ -17,13 +17,14 @@ def main():
     db_path = "/Users/michaelfortune/Developer/projects/money/money_features/money.db"
     database_exists = os.path.isfile(db_path)
     if not database_exists:
-
         create_database()
+        con = sqlite3.connect(db_path)
+        cur = con.cursor()
         print_slow("""
 Welcome to Money Pots, your savings and budgeting calculator.""")
         print_slow(instructions())
-        user,vaults,pots = create_profile(con)
-        username = user.username[0]
+        user,vaults, vault_ids,pots,pot_ids,transactions,transaction_ids,forecasts,forecast_ids = create_profile(con)
+        username = user.username
     
     if database_exists:
         #log user in
@@ -39,16 +40,13 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
             if user_exists == True:
                 print()
                 print_slow_nospace("Welcome back to Money Pots")
+                #create user and username variables
                 user = re_user(con,login)
-                username = user.username[0]
+                username = login
                 #refresh user data
                 vaults, vault_ids,pots,pot_ids,transactions,transaction_ids,forecasts,forecast_ids = refresh_user_data(con,user,username)
-                # Update Pots and Vaults values, using class methods
-                for pot in pots.values():
-                    pot.pot_value()
-                
-                for vault in vaults.values():
-                    vault.vault_value()
+                #update Pots and Vaults values, using class methods
+                pots,vaults = refresh_pot_vault_values(pots,vaults)
                 break
             else:
                 print_slow("\nUser doesn't exist. Respond 'Try again' 'New user' or 'Exit'")    
@@ -65,7 +63,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     print_slow_nospace("\nUnknown Command. Please try to login again")    
                  
 # Loop Menu on Command line until exit
-
     while True:
         print_slow('\n\033[1;31mMain Menu\033[0m\n\nNow, I await your commands to proceed. Please type: \n\n"New" to submit a new item (profile, vaults, pots, transactions, forecasts), \n"Summary" to get either a balance report, forecast report or transactions summary, \n"Delete" to remove an item, \n"Instructions" to get further information on how to use Money Pots, \n"Exit" to terminate the programme')
         action = input()
@@ -82,230 +79,42 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     break
 
                 elif new_action == "Vault":
+                    #refresh user data
+                    vaults, vault_ids,pots,pot_ids,transactions,transaction_ids,forecasts,forecast_ids = refresh_user_data(con,user,username)
                     vault_count = count_vaults(con)
                     vaults[f"vault_{(vault_count + 1)}"] = create_vault(con,vault_count,user,username)
-                    
                     # Create associated pots
                     print_slow_nospace("Now, let's create at least one pot to associate with this vault")
                     pot_count = count_pots(con)
-                    selected_vault = vaults.get(f"vault_{(vault_count + 1)}")
-
-                    pots[f"pot_{(pot_count + 1)}"] = create_pot(con,pot_count,selected_vault,user,username)
+                    pots[f"pot_{(pot_count + 1)}"] = create_pot(con,pot_count,vaults,user,username)
                     action = ""
                     break
 
                 elif new_action == "Pot":
-                    while True:
-                        try:
-                            print_slow("\nWhat vault will this pot be assigned to? ")
-                            pot_vault = input()
-                            pot_count = count_pots(con)
-                            selected_vault = None
-                            for vault in vaults.values():
-                                if vault.vault_name == pot_vault and vault.username == user.username:
-                                    selected_vault = vault
-
-                            if selected_vault:
-                                pots[f"pot_{(pot_count + 1)}"] = create_pot(con,pot_count,selected_vault,user)
-
-                                break
-
-                            else:
-                                print_slow(f"Vault '{vault_input}' not found. Please enter a valid vault name.")
-                                
-                        except ValueError as e:  
-                            print_slow(f"Error: {e}")
-                            print_slow("Please try again")
-                            
-                        except Exception as e:  
-                            print_slow(f"An unexpected error occurred: {e}")
-                            print_slow("Please try again")
-                        break
+                    #refresh user data
+                    vaults, vault_ids,pots,pot_ids,transactions,transaction_ids,forecasts,forecast_ids = refresh_user_data(con,user,username)
+                    for vault in vaults.values():
+                        print(f"Vault Name: {vault.vault_name}, Owner: {vault.username}")
+                    pot_count = count_pots(con)
+                    pots[f"pot_{(pot_count + 1)}"] = create_pot(con,pot_count,vaults,user,username)
                     action = ""
                     break
 
                 elif new_action == "Transaction":
-                    print_slow("\nExcellent. Now, let me help you create a new transaction.")
                     while True:
-                        try:
-                            while True: 
-                                # Count existing transactions
-                                start_transaction = count_transactions(con)
-                                if start_transaction == None:
-                                    start_transaction = 0
-                                print_slow("What pot should this pot be assigned to?: ")
-                                pot_input = input()
-
-                                # Find the pot using a simple loop
-                                selected_pot = None
-                                selected_vault = None
-                                for pot in pots.values():
-                                    if pot.pot_name == pot_input and pot.username == user.username: 
-                                        selected_pot = pot
-                                        selected_vault = vaults.get(f"vault_{pot.vault_id}")
-                                        break
-
-                                if selected_pot:
-                                    transactions[f"transaction_{1}"] = submit_transaction(con,start_transaction,selected_pot,selected_vault,user,username)
-                                    selected_pot.pot_value()
-                                    break
-                                else:
-                                    print_slow(f"pot '{pot_input}' not found. Please enter a valid pot name.")
-                            break
-                        
-                        except ValueError as e:
-                            print_slow(f"Error: {e}")
-                            
-                        except Exception as e:  
-                            print_slow(f"An unexpected error occurred: {e}")
-                            
+                        transaction_count = count_transactions(con)
+                        transactions[f"transaction_{(transaction_count + 1)}"] = submit_transaction(con,transaction_count,pots,vaults,user,username)
+                        #refresh pot/vault values
+                        pots,vaults = refresh_pot_vault_values(pots,vaults)
                         break
                     
                 elif new_action == "Forecast":
                     while True:
-                        print_slow('\nOK, would you like to submit a "Single expense" or a "Weekly expense"? or "Exit" to return back to the main menu')
-                        expense = input()
-
-                        if expense == "Single expense":
-                            # Collect forecast name
-                            print_slow("\nPlease provide a name reference for this Forecast: ")
-                            forecast_name = input()
-                            while True:
-                                single = int(input("\nWhat's the amount of your predicted expenditure? \n\n"))
-                                if single > 0:
-                                    break
-                                else:
-                                    print_slow("\namount must be greater than 0")
-
-                            # Collect forecast type
-                            while True:
-                                types = ["in","out"]
-                                print_slow('\nPlease define the type of forecast. "in" or "out": ')
-                                forecast_type = input()
-                                if forecast_type not in types:
-                                    print_slow("\nincorrect forecast reference")
-                                else:
-                                    break
-                                
-                            if forecast_type == "out":
-                                single = single * -1
-                            else:
-                                pass
-                        
-                            print_slow("\nExcellent. Now we'll define when the transaction took place. Please note, all date input values must be in the format DD/MM/YY")
-                            while True:
-                                expense_date = collect_date("Date of transaction: ")
-                                today = datetime.datetime.today()
-                                if expense_date < today:
-                                    print_slow("\nInvalid Date, must be in the future for a forecast")
-                                else:
-                                    break
-
-                            try:
-                                while True: 
-                                    # Count existing forecasts
-                                    start_forecast = count_forecasts(con)
-                                    if start_forecast == None:
-                                        start_forecast = 0
-                                    print_slow("\nWhat pot should this pot be assigned to?: ")
-                                    pot_input = input()
-                                    # Find the pot using a simple loop
-                                    selected_pot = None
-                                    selected_vault = None
-                                    for pot in pots.values():
-                                        if pot.pot_name == pot_input and pot.username == user.username: 
-                                            selected_pot = pot
-                                            selected_vault = vaults.get(f"vault_{pot.vault_id}")
-                                            break
-                                    if selected_pot:
-                                        forecasts[f"forecast_{1}"] = submit_forecast(con,forecast_name,start_forecast,selected_pot,selected_vault,user,username,expense_date,single,forecast_type)
-                                        selected_pot.pot_value()
-                                        break
-                                    else:
-                                        print_slow(f"pot '{pot_input}' not found. Please enter a valid pot name.")
-                                        
-                            except ValueError as e:  
-                                print_slow(f"Error: {e}")
-                            except Exception as e:  
-                                print_slow(f"An unexpected error occurred: {e}")
-                            
-                        elif expense == "Weekly expense":
-                            # Collect forecast name
-                            print_slow("\nPlease provide a name reference for this Forecast: ")
-                            forecast_name = input()
-                            while True:
-                                weekly = int(input("\nWhat's your predicted weekly expenditure? "))
-                                if weekly > 0:
-                                    break
-                                else:
-                                    print_slow("\nAmount must be greater than 0")
-
-                            # Collect forecast type
-                            while True:
-                                types = ["in","out"]
-                                print_slow('\nPlease define the type of forecast. "in" or "out": ')
-                                forecast_type = input()
-                                if forecast_type not in types:
-                                    print_slow("\nincorrect forecast reference")
-                                else:
-                                    break
-                                
-                            if forecast_type == "out":
-                                weekly = weekly * -1
-                            else:
-                                pass
-
-                            no_weeks = int(input("\nHow many weeks is this for? "))
-                            print_slow("\nExcellent. Now we'll define when the transaction will take place. Please note, all date input values must be in the format DD/MM/YY")
-                            
-                            while True:
-                                expense_date = collect_date("Date: ")
-                                today = datetime.datetime.today()
-                                date_list = {}
-                                if expense_date < today:
-                                    print_slow("\nInvalid Date, must be in the future for a forecast")
-                                else:
-                                    for i in range (0,no_weeks,1):
-                                        date = expense_date + datetime.timedelta(days=(7*i))
-                                        date_list[i] = date
-                                    break
-
-                            try:
-                                while True: 
-                                    start_forecast = count_forecasts(con)
-                                    if start_forecast == None:
-                                        start_forecast = 0
-                                    print_slow("\nWhat pot should this pot be assigned to?: ")
-                                    pot_input = input()
-
-                                    # Find the pot using a simple loop
-                                    selected_pot = None
-                                    selected_vault = None
-                                    for pot in pots.values():
-                                        if pot.pot_name == pot_input and pot.username == user.username: 
-                                            selected_pot = pot
-                                            selected_vault = vaults.get(f"vault_{pot.vault_id}")
-                                            break
-
-                                    if selected_pot:
-                                        for key,date in date_list.items():
-                                            forecasts[f"forecast_{key}"] = submit_forecast(con,forecast_name,(start_forecast + key),selected_pot,selected_vault,user,username,date,weekly,forecast_type)
-                                            selected_pot.pot_value()
-                                        break
-                                    else:
-                                        print_slow(f"pot '{pot_input}' not found. Please enter a valid pot name.")
-                            
-                            except ValueError as e:  
-                                print_slow(f"Error: {e}")
-                            except Exception as e:  
-                                print_slow(f"An unexpected error occurred: {e}")
-                            
-                        elif expense == "Exit":
-                            print()
-                            break
-                        else:
-                            print_slow("\nPlease enter a valid expense type ('Single expense', 'Weekly expense', or 'Exit' to return")
-                        break
+                        forecast_count = count_forecasts(con)
+                        forecast_updates,no_weeks = submit_forecast(con,forecast_count,pots,vaults,user,username)
+                        for day in range(0,no_weeks,1): 
+                            forecasts[f"forecast_{(forecast_count + (day + 1))}"] = forecast_updates[(day)] 
+                        break  
 
                 elif new_action == "Exit":
                     action = ""
@@ -320,7 +129,7 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
         if action == "Summary":
             while True:
-                print_slow('\n\033[1;31mSummary Menu\033[0m\n\nWhat type of summary would you like to create? \n\n"Current Balance Report" to show your vaults and pots balances today, \n"Forecast Balance Report" to show your vaults or pots balances from a given start date until the final forecast estimate, \n"Forecast List" to show a list of your predicted forecast expenditures, \n"Transaction list" to show a list of all your recorded transactions, \n"Exit" to return back to the main menu')
+                print_slow('\n\033[1;31mSummary Menu\033[0m\n\nWhat type of summary would you like to create? \n\n"Current Balance Report" to show your vaults and pots balances today, \n"Forecast Balance Report" to show your vaults or pots balances from a given start date until the final forecast estimate, \n"Forecast List" to show a list of your predicted forecast expenditures, \n"Transaction List" to show a list of all your recorded transactions, \n"Exit" to return back to the main menu')
                 summary_action = input()
 
                 if summary_action == "Current Balance Report":
@@ -336,7 +145,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                     while True:
                         print_slow('\nWould you like to forecast the balance for a "Vault" or "Pot"?')
                         option = input()
-
                         if option == "Vault":
                             forecast_balance_vault(con,vaults,pots,username)
                             break
@@ -347,7 +155,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                         else:
                             print_slow_nospace("\nOption not recognized, please try again.")
                             continue
-
                     break
 
                 elif summary_action == "Forecast List":
@@ -370,14 +177,13 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
 
                 else:
                     print_slow_nospace("Sorry, I don't recognize that instruction. Please try again.")
-
+            
             continue
 
         elif action == "Delete":
             while True:
                 print_slow('\n\033[1;31mDelete Menu\033[0m\n\nWhat would you like to delete? \n\n"Profile" to delete a user profile and all associated data, \n"Vault" to delete a specific vault, \n"Pot" to delete a specific pot, \n"Transaction" to delete a specific transaction, \n"Forecast" to delete a specific Forecast, \n"Exit" to return to main menu')
                 delete_action = input()
-
                 if delete_action == "Profile":
                     del_profile(con,user,username)
                     exit()
