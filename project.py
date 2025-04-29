@@ -93,8 +93,6 @@ Welcome to Money Pots, your savings and budgeting calculator. Let me help you to
                 elif new_action == "Pot":
                     #refresh user data
                     vaults, vault_ids,pots,pot_ids,transactions,transaction_ids,forecasts,forecast_ids = refresh_user_data(con,user,username)
-                    for vault in vaults.values():
-                        print(f"Vault Name: {vault.vault_name}, Owner: {vault.username}")
                     pot_count = count_pots(con)
                     pots[f"pot_{(pot_count + 1)}"] = create_pot(con,pot_count,vaults,user,username)
                     action = ""
